@@ -306,6 +306,8 @@ const StudentDashboard = () => {
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]); // timetable
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [calEvents, setCalEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [calMonth, setCalMonth] = useState(new Date());
@@ -341,6 +343,20 @@ const StudentDashboard = () => {
       (data) => setAssignments(data.assignments || []),
       undefined,
       finish,
+    );
+
+    // Announcements + calendar events — gracefully ignore errors
+    get(
+      remoteRoutes.announcements,
+      (d) => setAnnouncements(Array.isArray(d) ? d : []),
+      undefined,
+      undefined,
+    );
+    get(
+      remoteRoutes.calendarEvents,
+      (d) => setCalEvents(Array.isArray(d) ? d : []),
+      undefined,
+      undefined,
     );
 
     // Timetable — gracefully ignore if endpoint not yet live
@@ -618,6 +634,301 @@ const StudentDashboard = () => {
           <div className={classes.welcomeSub}>
             {format(now, 'EEEE, MMMM d')} · Your learning overview
           </div>
+
+          {/* ── Announcements ── */}
+          {announcements.length > 0 &&
+            (() => {
+              const ANN_CONFIG: Record<
+                string,
+                {
+                  bg: string;
+                  bar: string;
+                  icon: string;
+                  label: string;
+                  title: string;
+                  body: string;
+                }
+              > = {
+                info: {
+                  bg: '#eff6ff',
+                  bar: '#3b82f6',
+                  icon: '📢',
+                  label: 'Announcement',
+                  title: '#1e40af',
+                  body: '#1d4ed8',
+                },
+                warning: {
+                  bg: '#fffbeb',
+                  bar: '#f59e0b',
+                  icon: '⚠️',
+                  label: 'Important',
+                  title: '#92400e',
+                  body: '#b45309',
+                },
+                event: {
+                  bg: '#f0fdf4',
+                  bar: '#22c55e',
+                  icon: '🎉',
+                  label: 'Event',
+                  title: '#14532d',
+                  body: '#166534',
+                },
+                success: {
+                  bg: '#f5f3ff',
+                  bar: '#8b5cf6',
+                  icon: '✅',
+                  label: 'Notice',
+                  title: '#4c1d95',
+                  body: '#5b21b6',
+                },
+              };
+              return (
+                <div style={{ marginBottom: 16 }}>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: '#8a8f99',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      marginBottom: 10,
+                    }}
+                  >
+                    📣 Notices from Admin
+                  </div>
+                  {announcements.slice(0, 5).map((ann: any) => {
+                    const c = ANN_CONFIG[ann.type] || ANN_CONFIG.info;
+                    return (
+                      <div
+                        key={ann.id}
+                        style={{
+                          background: c.bg,
+                          borderRadius: 12,
+                          marginBottom: 10,
+                          display: 'flex',
+                          overflow: 'hidden',
+                          boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
+                        }}
+                      >
+                        {/* Colored left bar */}
+                        <div
+                          style={{ width: 4, background: c.bar, flexShrink: 0 }}
+                        />
+                        <div style={{ padding: '14px 16px', flex: 1 }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              marginBottom: 6,
+                            }}
+                          >
+                            <span style={{ fontSize: 16 }}>{c.icon}</span>
+                            <span
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: c.bar,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em',
+                              }}
+                            >
+                              {c.label}
+                            </span>
+                            {ann.pinned && (
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  color: '#d97706',
+                                  background: '#fef3c7',
+                                  borderRadius: 5,
+                                  padding: '1px 6px',
+                                }}
+                              >
+                                📌 Pinned
+                              </span>
+                            )}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 14,
+                              fontWeight: 700,
+                              color: c.title,
+                              marginBottom: 5,
+                            }}
+                          >
+                            {ann.title}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 13,
+                              color: c.body,
+                              lineHeight: 1.6,
+                              whiteSpace: 'pre-line',
+                            }}
+                          >
+                            {ann.body}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: '#9ca3af',
+                              marginTop: 8,
+                            }}
+                          >
+                            {new Date(ann.createdAt).toLocaleDateString(
+                              'en-GB',
+                              {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                              },
+                            )}
+                            {ann.expiresAt &&
+                              ` · Expires ${new Date(
+                                ann.expiresAt,
+                              ).toLocaleDateString('en-GB', {
+                                day: 'numeric',
+                                month: 'short',
+                              })}`}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+          {/* ── Upcoming calendar events ── */}
+          {calEvents.length > 0 && (
+            <div
+              style={{
+                background: '#fff',
+                border: '1px solid #ede8e3',
+                borderRadius: 12,
+                padding: '14px 18px',
+                marginBottom: 16,
+                boxShadow: '0 1px 6px rgba(0,0,0,0.05)',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: '#8a8f99',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  marginBottom: 12,
+                }}
+              >
+                📅 Upcoming Events
+              </div>
+              {calEvents.slice(0, 4).map((evt: any) => {
+                const evtDate = new Date(evt.eventDate);
+                const daysAway = Math.ceil(
+                  (evtDate.getTime() - Date.now()) / 86400000,
+                );
+                const EVT_COLORS: Record<string, string> = {
+                  general: '#6366f1',
+                  class: '#0ea5e9',
+                  holiday: '#10b981',
+                  milestone: '#f59e0b',
+                  deadline: '#fe3a6a',
+                };
+                const color = EVT_COLORS[evt.type] || '#6366f1';
+                const daysLabel =
+                  daysAway <= 0
+                    ? 'Today'
+                    : daysAway === 1
+                    ? 'Tomorrow'
+                    : `In ${daysAway}d`;
+                return (
+                  <div
+                    key={evt.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 14,
+                      padding: '9px 0',
+                      borderBottom: '1px solid #f3ede9',
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: `${color}18`,
+                        borderRadius: 10,
+                        padding: '6px 10px',
+                        textAlign: 'center',
+                        flexShrink: 0,
+                        minWidth: 44,
+                        border: `1px solid ${color}30`,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 16,
+                          fontWeight: 800,
+                          color,
+                          lineHeight: 1,
+                        }}
+                      >
+                        {evtDate.getDate()}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 700,
+                          color,
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {evtDate.toLocaleDateString('en-GB', {
+                          month: 'short',
+                        })}
+                      </div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 700,
+                          color: '#1f2025',
+                        }}
+                      >
+                        {evt.title}
+                      </div>
+                      {evt.location && (
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: '#9ca3af',
+                            marginTop: 2,
+                          }}
+                        >
+                          📍 {evt.location}
+                        </div>
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: daysAway <= 1 ? '#fe3a6a' : color,
+                        background: daysAway <= 1 ? '#fff0f3' : `${color}12`,
+                        borderRadius: 8,
+                        padding: '3px 9px',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {daysLabel}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* ── Next class / In-progress banner ── */}
           {bannerSession && (

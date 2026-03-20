@@ -19,9 +19,6 @@ const UserControl = React.lazy(() => import('./admin/users/UserControl'));
 
 const Dashboard = React.lazy(() => import('./dashboard/Dashboard'));
 const Contacts = React.lazy(() => import('./contacts/Contacts'));
-const ContactDetails = React.lazy(
-  () => import('./contacts/details/ContactDetails'),
-);
 const AdminStudentDetails = React.lazy(
   () => import('./contacts/details/AdminStudentDetails'),
 );
@@ -71,6 +68,15 @@ const TeacherAssignments = React.lazy(
   () => import('./admin/assignments/TeacherAssignments'),
 );
 const AdminCourses = React.lazy(() => import('./admin/courses/AdminCourses'));
+const AdminAnnouncements = React.lazy(
+  () => import('./admin/announcements/AdminAnnouncements'),
+);
+const Hubs = React.lazy(() => import('./admin/hubs/Hubs'));
+const AdminAttendance = React.lazy(
+  () => import('./admin/attendance/AdminAttendance'),
+);
+const CheckIn = React.lazy(() => import('./student/CheckIn'));
+const AttendanceCode = React.lazy(() => import('./student/AttendanceCode'));
 
 const Testing = () => (
   <Layout>
@@ -91,6 +97,13 @@ const ContentSwitch = () => {
     <Suspense fallback={<Loading />}>
       <Switch>
         <Route path={localRoutes.chat} component={MailChat} />
+
+        <Route path={localRoutes.attendanceCheckin} component={CheckIn} />
+        <Route
+          exact
+          path={localRoutes.attendanceCode}
+          component={AttendanceCode}
+        />
 
         <Route exact={true} path="/" component={Dashboard} />
         <Route path={localRoutes.dashboard} component={Dashboard} />
@@ -193,6 +206,12 @@ const ContentSwitch = () => {
           component={TeacherAssignments}
         />
         <Route path={localRoutes.adminCourses} component={AdminCourses} />
+        <Route
+          path={localRoutes.adminAnnouncements}
+          component={AdminAnnouncements}
+        />
+        <Route path={localRoutes.hubs} component={Hubs} />
+        <Route path={localRoutes.attendance} component={AdminAttendance} />
 
         <Route path={localRoutes.test} component={Testing} />
         <Route

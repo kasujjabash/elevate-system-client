@@ -159,18 +159,8 @@ const useStyles = makeStyles((theme: Theme) => ({
   },
 }));
 
-const HUB_OPTIONS = ['Katanga', 'Kosovo', 'Jinja', 'Namayemba', 'Lyantode'];
-const COURSE_OPTIONS = [
-  'Graphic Design',
-  'Website Development',
-  'Film & Photography',
-  'ALX Course',
-];
-
 // Build a 1–52 week array
 const WEEK_OPTIONS = Array.from({ length: 52 }, (_, i) => i + 1);
-
-const DURATION_OPTIONS = [1, 2, 3, 4, 5, 6];
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   open: { bg: '#eff6ff', color: '#3b82f6' },
@@ -181,15 +171,12 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
 
 const EMPTY_FORM = {
   title: '',
-  course: '',
-  hub: '',
+  courseId: '',
   dueDate: '',
-  totalMarks: '',
+  maxScore: '100',
   description: '',
   weekNumber: '',
   isMilestone: false,
-  courseStartDate: '',
-  courseDurationMonths: '',
 };
 
 /** Returns true if weekNumber is currently unlocked given courseStartDate */
@@ -209,6 +196,7 @@ const TeacherAssignments = () => {
 
   const [tab, setTab] = useState(0);
   const [assignments, setAssignments] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
   const [openNew, setOpenNew] = useState(false);
@@ -230,6 +218,13 @@ const TeacherAssignments = () => {
 
   useEffect(() => {
     fetchAssignments();
+    // Load courses for the dropdown
+    get(
+      remoteRoutes.coursesBase,
+      (data: any[]) => setCourses(Array.isArray(data) ? data : []),
+      undefined,
+      undefined,
+    );
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -243,29 +238,24 @@ const TeacherAssignments = () => {
   };
 
   const handleCreate = () => {
-    if (
-      !form.title ||
-      !form.course ||
-      !form.hub ||
-      !form.dueDate ||
-      !form.weekNumber
-    ) {
-      Toast.error('Please fill in all required fields including Week Number');
+    if (!form.title || !form.courseId || !form.dueDate) {
+      Toast.error('Please fill in title, course, and due date');
       return;
     }
     setUploading(true);
     post(
       remoteRoutes.assignments,
       {
-        ...form,
-        weekNumber: Number(form.weekNumber),
-        courseDurationMonths: form.courseDurationMonths
-          ? Number(form.courseDurationMonths)
-          : undefined,
-        totalMarks: form.totalMarks ? Number(form.totalMarks) : undefined,
+        title: form.title,
+        courseId: Number(form.courseId),
+        description: form.description,
+        dueDate: form.dueDate,
+        maxScore: form.maxScore ? Number(form.maxScore) : 100,
+        weekNumber: form.weekNumber ? Number(form.weekNumber) : undefined,
+        isMilestone: form.isMilestone,
       },
       () => {
-        Toast.info('Assignment created successfully');
+        Toast.success('Assignment created successfully');
         setOpenNew(false);
         setForm(EMPTY_FORM);
         setAttachedFiles([]);
@@ -279,13 +269,13 @@ const TeacherAssignments = () => {
   const handleViewSubmissions = (assignment: any) => {
     setSelectedAssignment(assignment);
     get(
-      `${remoteRoutes.assignmentSubmissions}?assignmentId=${assignment.id}`,
+      `${remoteRoutes.assignments}/${assignment.id}/submissions`,
       (data: any[]) => {
         setSubmissions(Array.isArray(data) ? data : []);
         const g: Record<string, string> = {};
         const f: Record<string, string> = {};
         (Array.isArray(data) ? data : []).forEach((s: any) => {
-          g[s.id] = s.grade || '';
+          g[s.id] = s.score != null ? String(s.score) : '';
           f[s.id] = s.feedback || '';
         });
         setGrades(g);
@@ -298,14 +288,29 @@ const TeacherAssignments = () => {
   };
 
   const handleSaveGrade = (submissionId: string) => {
+    const score = Number(grades[submissionId]);
+    if (Number.isNaN(score)) {
+      Toast.error('Enter a valid score');
+      return;
+    }
     post(
-      remoteRoutes.assignmentGrades,
-      {
-        submissionId,
-        grade: grades[submissionId],
-        feedback: feedback[submissionId],
+      `${remoteRoutes.assignments}/submissions/${submissionId}/grade`,
+      { score, feedback: feedback[submissionId] || '' },
+      () => {
+        Toast.success('Grade saved');
+        setSubmissions((prev) =>
+          prev.map((s) =>
+            String(s.id) === submissionId
+              ? {
+                  ...s,
+                  score,
+                  feedback: feedback[submissionId],
+                  status: 'Graded',
+                }
+              : s,
+          ),
+        );
       },
-      () => Toast.info('Grade saved'),
       undefined,
       undefined,
     );
@@ -661,50 +666,29 @@ const TeacherAssignments = () => {
                   size="small"
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={8}>
                 <TextField
                   select
                   label="Course *"
-                  value={form.course}
-                  onChange={(e) => setForm({ ...form, course: e.target.value })}
+                  value={form.courseId}
+                  onChange={(e) =>
+                    setForm({ ...form, courseId: e.target.value })
+                  }
                   variant="outlined"
                   fullWidth
                   size="small"
                 >
-                  {COURSE_OPTIONS.map((c) => (
-                    <MenuItem key={c} value={c}>
-                      {c}
+                  {courses.map((c: any) => (
+                    <MenuItem key={c.id} value={String(c.id)}>
+                      {c.title}
                     </MenuItem>
                   ))}
                 </TextField>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  select
-                  label="Hub *"
-                  value={form.hub}
-                  onChange={(e) => setForm({ ...form, hub: e.target.value })}
-                  variant="outlined"
-                  fullWidth
-                  size="small"
-                >
-                  {HUB_OPTIONS.map((h) => (
-                    <MenuItem key={h} value={h}>
-                      {h} Hub
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-
-              {/* Week + Milestone */}
-              <Grid item xs={12}>
-                <Divider style={{ margin: '4px 0 12px' }} />
-                <span className={classes.sectionLabel}>Weekly schedule</span>
               </Grid>
               <Grid item xs={12} sm={4}>
                 <TextField
                   select
-                  label="Week Number *"
+                  label="Week"
                   value={form.weekNumber}
                   onChange={(e) =>
                     setForm({ ...form, weekNumber: e.target.value })
@@ -712,7 +696,7 @@ const TeacherAssignments = () => {
                   variant="outlined"
                   fullWidth
                   size="small"
-                  helperText="Which week of the course is this?"
+                  helperText="Which course week?"
                 >
                   {WEEK_OPTIONS.map((w) => (
                     <MenuItem key={w} value={w}>
@@ -721,40 +705,53 @@ const TeacherAssignments = () => {
                   ))}
                 </TextField>
               </Grid>
-              <Grid item xs={12} sm={4}>
+
+              {/* Dates + marks */}
+              <Grid item xs={12}>
+                <Divider style={{ margin: '4px 0 12px' }} />
+                <span className={classes.sectionLabel}>Details</span>
+              </Grid>
+              <Grid item xs={12} sm={6}>
                 <TextField
-                  label="Course Start Date"
+                  label="Due Date *"
                   type="date"
-                  value={form.courseStartDate}
+                  value={form.dueDate}
                   onChange={(e) =>
-                    setForm({ ...form, courseStartDate: e.target.value })
+                    setForm({ ...form, dueDate: e.target.value })
                   }
                   variant="outlined"
                   fullWidth
                   size="small"
                   InputLabelProps={{ shrink: true }}
-                  helperText="Used to calculate week unlock dates"
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6}>
                 <TextField
-                  select
-                  label="Course Duration (months)"
-                  value={form.courseDurationMonths}
+                  label="Max Score"
+                  type="number"
+                  value={form.maxScore}
                   onChange={(e) =>
-                    setForm({ ...form, courseDurationMonths: e.target.value })
+                    setForm({ ...form, maxScore: e.target.value })
                   }
                   variant="outlined"
                   fullWidth
                   size="small"
-                  helperText="Total course length"
-                >
-                  {DURATION_OPTIONS.map((m) => (
-                    <MenuItem key={m} value={m}>
-                      {m} month{m !== 1 ? 's' : ''}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  label="Description / Instructions"
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm({ ...form, description: e.target.value })
+                  }
+                  variant="outlined"
+                  fullWidth
+                  multiline
+                  minRows={3}
+                  size="small"
+                  helperText="Line breaks are preserved exactly as typed."
+                />
               </Grid>
               <Grid item xs={12}>
                 <FormControlLabel
@@ -788,53 +785,6 @@ const TeacherAssignments = () => {
                       </span>
                     </span>
                   }
-                />
-              </Grid>
-
-              {/* Dates + marks */}
-              <Grid item xs={12}>
-                <Divider style={{ margin: '4px 0 12px' }} />
-                <span className={classes.sectionLabel}>Details</span>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Due Date *"
-                  type="date"
-                  value={form.dueDate}
-                  onChange={(e) =>
-                    setForm({ ...form, dueDate: e.target.value })
-                  }
-                  variant="outlined"
-                  fullWidth
-                  size="small"
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Total Marks"
-                  type="number"
-                  value={form.totalMarks}
-                  onChange={(e) =>
-                    setForm({ ...form, totalMarks: e.target.value })
-                  }
-                  variant="outlined"
-                  fullWidth
-                  size="small"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="Description / Instructions"
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm({ ...form, description: e.target.value })
-                  }
-                  variant="outlined"
-                  fullWidth
-                  multiline
-                  rows={3}
-                  size="small"
                 />
               </Grid>
 
@@ -1076,7 +1026,7 @@ const TeacherAssignments = () => {
                         size="small"
                         fullWidth
                         multiline
-                        rows={2}
+                        minRows={2}
                         placeholder="Write feedback for the student..."
                       />
                     </Grid>

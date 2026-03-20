@@ -18,6 +18,8 @@ import HelpOutlineIcon from '@material-ui/icons/HelpOutline';
 import AssignmentIcon from '@material-ui/icons/Assignment';
 import TrendingUpIcon from '@material-ui/icons/TrendingUp';
 import PersonIcon from '@material-ui/icons/Person';
+import NotificationsActiveIcon from '@material-ui/icons/NotificationsActive';
+import HowToRegIcon from '@material-ui/icons/HowToReg';
 import { useHistory, useLocation } from 'react-router-dom';
 import { createStyles, makeStyles, Theme, withStyles } from '@material-ui/core';
 import Grid from '@material-ui/core/Grid';
@@ -108,10 +110,25 @@ const staffRoutes: IAppRoute[] = [
     icon: BubbleChartIcon,
   },
   {
+    requiredRoles: [
+      appPermissions.roleCourseEdit,
+      appPermissions.roleCourseView,
+    ],
+    name: 'Announcements',
+    route: localRoutes.adminAnnouncements,
+    icon: NotificationsActiveIcon,
+  },
+  {
     requiredRoles: [appPermissions.roleReportView],
     name: 'Reports',
     route: localRoutes.reports,
     icon: AssessmentIcon,
+  },
+  {
+    requiredRoles: [appPermissions.roleClassView, appPermissions.roleClassEdit],
+    name: 'Attendance',
+    route: localRoutes.attendance,
+    icon: HowToRegIcon,
   },
   {
     requiredRoles: [appPermissions.roleClassView, appPermissions.roleClassEdit],

@@ -23,9 +23,19 @@ yarn-debug.log*
 yarn-error.log*
 .idea/
 
+# environment variables — NEVER commit real secrets
 .env
-#Eslint cache file
+.env.staging
+.env.production
+
+# Eslint cache
 .eslintcache
+
+# Sensitive files
+*.pem
+*.key
+service-account*.json
+credentials*.json
 
 
 

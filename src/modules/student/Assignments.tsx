@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   Card,
-  CardContent,
   Chip,
   Collapse,
   Dialog,
@@ -38,12 +37,10 @@ import {
   differenceInWeeks,
   parseISO,
 } from 'date-fns';
-import { useSelector } from 'react-redux';
 import Layout from '../../components/layout/Layout';
 import Loading from '../../components/Loading';
 import { remoteRoutes } from '../../data/constants';
-import { IState } from '../../data/types';
-import { post, search } from '../../utils/ajax';
+import { get, post } from '../../utils/ajax';
 import Toast from '../../utils/Toast';
 
 const useStyles = makeStyles((theme: Theme) =>
@@ -321,7 +318,6 @@ const calcCurrentWeek = (courseStartDate?: string): number => {
 // ─── Component ────────────────────────────────────────────────
 const Assignments = () => {
   const classes = useStyles();
-  const user = useSelector((state: IState) => state.core.user);
 
   const [assignments, setAssignments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -341,14 +337,13 @@ const Assignments = () => {
 
   useEffect(() => {
     setLoading(true);
-    search(
-      remoteRoutes.assignments,
-      { contactId: user.contactId },
-      (data) => setAssignments(Array.isArray(data) ? data : data?.data || []),
+    get(
+      `${remoteRoutes.assignments}/mine`,
+      (data) => setAssignments(Array.isArray(data) ? data : []),
       undefined,
       () => setLoading(false),
     );
-  }, [user.contactId]);
+  }, []);
 
   // ── Group assignments by week ─────────────────────────────
   const courseStartDate: string | undefined = assignments[0]?.courseStartDate;
@@ -417,7 +412,6 @@ const Assignments = () => {
 
     // For file submissions we would use FormData; for now send JSON
     const payload: any = {
-      contactId: user.contactId,
       type: submitType,
     };
     if (submitType === 'text') payload.content = submissionText;

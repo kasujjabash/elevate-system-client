@@ -39,10 +39,18 @@ export const schoolAssignRoles = [
   appRoles.Student,
 ];
 
-export const hasRole = (
-  { permissions = [] }: IAuthUser,
-  appPermission: string,
-): boolean => permissions?.indexOf(appPermission) > -1;
+export const isStudent = (user: IAuthUser) =>
+  user?.roles?.includes(appRoles.Student) ?? false;
+
+export const hasRole = (user: IAuthUser, appPermission: string): boolean => {
+  // Non-student users (admin/trainer) can see all staff nav items.
+  // Real data security is enforced by the server.
+  if (!isStudent(user)) {
+    return true;
+  }
+  const { permissions = [] } = user || {};
+  return permissions?.indexOf(appPermission) > -1;
+};
 
 export const hasAnyRole = (
   user: IAuthUser,
@@ -60,6 +68,3 @@ export const isSchoolAdmin = (user: IAuthUser) =>
 
 export const isInstructor = (user: IAuthUser) =>
   hasAnyRole(user, [appRoles.Instructor]);
-
-export const isStudent = (user: IAuthUser) =>
-  user?.roles?.includes(appRoles.Student) ?? false;

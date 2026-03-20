@@ -18,7 +18,7 @@ import {
   Typography,
 } from '@material-ui/core';
 import PeopleIcon from '@material-ui/icons/People';
-import PersonAddIcon from '@material-ui/icons/PersonAdd';
+import HowToRegIcon from '@material-ui/icons/HowToReg';
 import EventIcon from '@material-ui/icons/Event';
 import AssignmentIcon from '@material-ui/icons/Assignment';
 import LocationOnIcon from '@material-ui/icons/LocationOn';
@@ -254,6 +254,7 @@ const FALLBACK_STATS = {
   newThisWeek: 0,
   todayClasses: 0,
   pendingExams: 0,
+  todayAttendance: 0,
 };
 
 const FALLBACK_HUBS = [
@@ -504,13 +505,13 @@ const AdminDashboard = () => {
           </Grid>
           <Grid item xs={6} sm={3}>
             <StatCard
-              label="New This Week"
-              value={stats.newThisWeek}
-              icon={PersonAddIcon}
+              label="Today's Attendance"
+              value={stats.todayAttendance}
+              icon={HowToRegIcon}
               color="#6366f1"
               trend={
-                stats.newThisWeek > 0
-                  ? `+${stats.newThisWeek} registrations`
+                stats.todayAttendance > 0
+                  ? `${stats.todayAttendance} checked in today`
                   : undefined
               }
             />

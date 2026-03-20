@@ -1,13 +1,22 @@
 import React from 'react';
 import MenuItem from '@material-ui/core/MenuItem';
 import Menu from '@material-ui/core/Menu';
-import { Avatar, makeStyles, createStyles, Theme } from '@material-ui/core';
+import {
+  Avatar,
+  makeStyles,
+  createStyles,
+  Theme,
+  Tooltip,
+} from '@material-ui/core';
+import IconButton from '@material-ui/core/IconButton';
+import HowToRegIcon from '@material-ui/icons/HowToReg';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { IState } from '../data/types';
 import { getInitials } from '../utils/stringHelpers';
 import { handleLogout } from '../data/coreActions';
 import { localRoutes } from '../data/constants';
+import { isStudent } from '../data/appRoles';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -76,7 +85,18 @@ export const BarView = (props: any) => {
   }
 
   return (
-    <div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      {isStudent(profile) && (
+        <Tooltip title="Mark Attendance">
+          <IconButton
+            size="small"
+            onClick={() => history.push(localRoutes.attendanceCode)}
+            style={{ color: '#fe3a6a' }}
+          >
+            <HowToRegIcon style={{ fontSize: 22 }} />
+          </IconButton>
+        </Tooltip>
+      )}
       <div
         className={classes.trigger}
         onClick={handleMenu}

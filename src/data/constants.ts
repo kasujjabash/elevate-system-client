@@ -117,6 +117,12 @@ export const localRoutes = {
   myAssignments: '/my-assignments',
   myProgress: '/my-progress',
 
+  // Attendance
+  attendance: '/admin/attendance',
+  attendanceSession: '/admin/attendance/:sessionId',
+  attendanceCheckin: '/attend/:token',
+  attendanceCode: '/attend',
+
   // Admin — exams & assignments
   exams: '/admin/exams',
   examDetails: '/admin/exams/:examId',
@@ -124,6 +130,7 @@ export const localRoutes = {
   teacherAssignmentDetails: '/admin/assignments/:assignmentId',
   timetable: '/admin/timetable',
   adminCourses: '/admin/courses',
+  adminAnnouncements: '/admin/announcements',
 };
 
 export const apiBaseUrl =
@@ -230,10 +237,19 @@ export const remoteRoutes = {
   assignmentFiles: `${apiBaseUrl}/api/assignments/files`,
   assignmentGrades: `${apiBaseUrl}/api/assignments/grades`,
 
+  // Announcements & Calendar Events
+  announcements: `${apiBaseUrl}/api/announcements`,
+  calendarEvents: `${apiBaseUrl}/api/announcements/events`,
+
   // Exams
   exams: `${apiBaseUrl}/api/exams`,
   examResults: `${apiBaseUrl}/api/exams/results`,
   examSchedule: `${apiBaseUrl}/api/exams/schedule`,
+
+  // Attendance
+  attendanceSessions: `${apiBaseUrl}/api/attendance/sessions`,
+  attendanceCheckin: `${apiBaseUrl}/api/attendance/checkin`,
+  attendanceSession: `${apiBaseUrl}/api/attendance/session`,
 
   // Dashboard metrics
   dashboardStats: `${apiBaseUrl}/api/dashboard/stats`,
