@@ -1,0 +1,20 @@
+html,
+body, #root, .fill {
+  margin: 0;
+  border: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.min-width-100{
+  min-width: 100% !important;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+  monospace;
+  max-width: 400px;
+  width: 100%;
+  margin: 0 auto;
+}
