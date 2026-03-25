@@ -1,10 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   Button,
-  Chip,
   Grid,
   InputAdornment,
-  LinearProgress,
   TextField,
   Typography,
 } from '@material-ui/core';
@@ -14,6 +12,7 @@ import SearchIcon from '@material-ui/icons/Search';
 import CalendarTodayIcon from '@material-ui/icons/CalendarToday';
 import ViewModuleIcon from '@material-ui/icons/ViewModule';
 import MenuBookIcon from '@material-ui/icons/MenuBook';
+
 import { useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
@@ -25,14 +24,6 @@ import { get } from '../../utils/ajax';
 const CORAL = '#fe3a6a';
 const ORANGE = '#fe8c45';
 const DARK = '#1f2025';
-const COURSE_COLORS = [
-  '#6366f1',
-  '#0ea5e9',
-  '#10b981',
-  '#f59e0b',
-  '#ef4444',
-  '#8b5cf6',
-];
 
 const useStyles = makeStyles((theme: Theme) => ({
   root: { padding: theme.spacing(3), minHeight: '100%' },
@@ -42,6 +33,7 @@ const useStyles = makeStyles((theme: Theme) => ({
     background: '#fff',
     borderRadius: 14,
     border: '1px solid rgba(0,0,0,0.08)',
+    borderLeft: `4px solid ${CORAL}`,
     padding: '20px 24px',
     marginBottom: 20,
   },
@@ -128,50 +120,47 @@ const useStyles = makeStyles((theme: Theme) => ({
     height: '100%',
     display: 'flex',
     flexDirection: 'column' as any,
+    position: 'relative' as any,
     '&:hover': {
       boxShadow: '0 4px 18px rgba(0,0,0,0.10)',
       transform: 'translateY(-2px)',
     },
   },
+  moduleCardTop: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 32,
+  },
   moduleIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 9,
+    width: 32,
+    height: 32,
+    borderRadius: 7,
+    background: '#f5f5f5',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    flexShrink: 0,
+  },
+  moduleCheckbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    border: '1.5px solid rgba(0,0,0,0.18)',
     flexShrink: 0,
   },
   moduleName: {
     fontSize: 13,
     fontWeight: 700,
     color: DARK,
-    lineHeight: 1.35,
-    marginBottom: 4,
+    lineHeight: 1.4,
+    marginBottom: 6,
     flex: 1,
   },
   moduleCode: {
     fontSize: 11,
     color: '#8a8f99',
-    marginBottom: 10,
-  },
-  moduleFooter: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginTop: 'auto' as any,
-    paddingTop: 10,
-    borderTop: '1px solid rgba(0,0,0,0.05)',
-  },
-  progressWrap: { flex: 1, marginRight: 10 },
-  progressBar: { borderRadius: 4, height: 5, backgroundColor: '#f3ede9' },
-  progressValue: { fontSize: 11, fontWeight: 700, color: CORAL },
-  statusChip: {
-    fontSize: 10,
-    fontWeight: 700,
-    height: 20,
-    borderRadius: 10,
   },
 
   // ── Empty state ──────────────────────────────────────────────────
@@ -367,11 +356,7 @@ const MyCourses = () => {
                   enrollment.courseCode ||
                   enrollment.course?.code ||
                   `${gi + 1}.${i + 1}`;
-                const progress = enrollment.progress || 0;
                 const courseId = enrollment.courseId || enrollment.course?.id;
-                const status = enrollment.status || 'active';
-                const color =
-                  COURSE_COLORS[(gi * 4 + i) % COURSE_COLORS.length];
 
                 return (
                   <Grid
@@ -387,44 +372,17 @@ const MyCourses = () => {
                         courseId && history.push(`/my-courses/${courseId}`)
                       }
                     >
-                      <div
-                        className={classes.moduleIconWrap}
-                        style={{ background: `${color}18` }}
-                      >
-                        <MenuBookIcon style={{ fontSize: 18, color }} />
+                      <div className={classes.moduleCardTop}>
+                        <div className={classes.moduleIconWrap}>
+                          <MenuBookIcon
+                            style={{ fontSize: 16, color: '#aab0bd' }}
+                          />
+                        </div>
+                        <div className={classes.moduleCheckbox} />
                       </div>
 
                       <div className={classes.moduleName}>{title}</div>
                       <div className={classes.moduleCode}>{code}</div>
-
-                      <div className={classes.moduleFooter}>
-                        <div className={classes.progressWrap}>
-                          <LinearProgress
-                            variant="determinate"
-                            value={progress}
-                            classes={{ root: classes.progressBar }}
-                            style={{ backgroundColor: '#f3ede9' }}
-                          />
-                        </div>
-                        <Chip
-                          label={
-                            status === 'completed' ? 'Done' : `${progress}%`
-                          }
-                          size="small"
-                          className={classes.statusChip}
-                          style={
-                            status === 'completed'
-                              ? {
-                                  background: 'rgba(16,185,129,0.1)',
-                                  color: '#10b981',
-                                }
-                              : {
-                                  background: 'rgba(254,58,106,0.08)',
-                                  color: CORAL,
-                                }
-                          }
-                        />
-                      </div>
                     </div>
                   </Grid>
                 );

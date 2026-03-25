@@ -19,6 +19,7 @@ import LiveTvIcon from '@material-ui/icons/LiveTv';
 import DateRangeIcon from '@material-ui/icons/DateRange';
 import ForumIcon from '@material-ui/icons/Forum';
 import AssignmentTurnedInIcon from '@material-ui/icons/AssignmentTurnedIn';
+import LibraryBooksIcon from '@material-ui/icons/LibraryBooks';
 import PlayCircleOutlineIcon from '@material-ui/icons/PlayCircleOutline';
 import ExitToAppIcon from '@material-ui/icons/ExitToApp';
 import Divider from '@material-ui/core/Divider';
@@ -46,14 +47,23 @@ interface IAppRoute {
 const studentRoutes: IAppRoute[] = [
   { name: 'Home', route: localRoutes.dashboard, icon: HomeIcon },
   { name: 'My Modules', route: localRoutes.myCourses, icon: MenuBookIcon },
+  {
+    name: 'Courses',
+    route: localRoutes.studentCourses,
+    icon: LibraryBooksIcon,
+  },
   { name: 'Live Classes', route: localRoutes.myClasses, icon: LiveTvIcon },
-  { name: 'My Timetable', route: localRoutes.calendar, icon: DateRangeIcon },
+  { name: 'My Timetable', route: localRoutes.myTimetable, icon: DateRangeIcon },
   {
     name: 'Assessments',
     route: localRoutes.myAssessments,
     icon: AssessmentIcon,
   },
-  { name: 'Chats / Inquiries', route: localRoutes.chat, icon: ForumIcon },
+  {
+    name: 'Chats / Inquiries',
+    route: localRoutes.chatsInquiries,
+    icon: ForumIcon,
+  },
   {
     name: 'Requests & Applications',
     route: localRoutes.myRequests,

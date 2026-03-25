@@ -128,7 +128,7 @@ const useStyles = makeStyles((theme: Theme) =>
       flexShrink: 0,
       width: 200,
       borderRadius: 14,
-      background: '#1f2025',
+      background: '#364153',
       cursor: 'pointer',
       padding: '18px 16px 16px',
       transition: 'transform 0.15s',
@@ -137,8 +137,6 @@ const useStyles = makeStyles((theme: Theme) =>
     moduleIconWrap: {
       width: 40,
       height: 40,
-      borderRadius: 10,
-      background: 'rgba(255,255,255,0.12)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -284,8 +282,6 @@ const useStyles = makeStyles((theme: Theme) =>
   }),
 );
 
-const COURSE_COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444'];
-
 const StudentDashboard = () => {
   const classes = useStyles();
   const history = useHistory();
@@ -298,6 +294,8 @@ const StudentDashboard = () => {
   ]);
   const [loading, setLoading] = useState(true);
   const [calMonth, setCalMonth] = useState(new Date());
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [announcementIdx, setAnnouncementIdx] = useState(0);
 
   useEffect(() => {
     let done = 0;
@@ -324,6 +322,15 @@ const StudentDashboard = () => {
       );
     }
 
+    // Announcements
+    get(
+      remoteRoutes.announcements,
+      (data: any) =>
+        setAnnouncements(Array.isArray(data) ? data : data?.data || []),
+      undefined,
+      undefined,
+    );
+
     // Attendance for last 7 days — uses student's own records
     get(
       `${remoteRoutes.attendanceSessions}?studentView=true&days=7`,
@@ -339,6 +346,15 @@ const StudentDashboard = () => {
       undefined,
     );
   }, [user?.contactId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-scroll announcements
+  useEffect(() => {
+    if (announcements.length <= 1) return;
+    const timer = setInterval(() => {
+      setAnnouncementIdx((i) => (i + 1) % announcements.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [announcements.length]);
 
   if (loading)
     return (
@@ -416,22 +432,54 @@ const StudentDashboard = () => {
       <div className={classes.shell}>
         {/* ══ MAIN CONTENT ══════════════════════════════════════════════ */}
         <div className={classes.main}>
-          {/* Reminders Banner */}
+          {/* Announcements Banner */}
           <div className={classes.reminderBanner}>
             <div className={classes.bannerDecor} />
             <div className={classes.bannerDecor2} />
-            <Typography className={classes.reminderTitle}>
-              Class &amp; Assessment Reminders
-            </Typography>
-            <Typography className={classes.reminderText}>
-              Stay on top of your schedule. Upcoming classes and exam dates are
-              now highlighted in your dashboard to help you plan ahead.
-            </Typography>
-            <div className={classes.reminderDots}>
-              <div className={classes.dotActive} />
-              <div className={classes.dot} />
-              <div className={classes.dot} />
-            </div>
+            {announcements.length > 0 ? (
+              <>
+                <Typography className={classes.reminderTitle}>
+                  {announcements[announcementIdx]?.title || 'Announcement'}
+                </Typography>
+                <Typography className={classes.reminderText}>
+                  {announcements[announcementIdx]?.message ||
+                    announcements[announcementIdx]?.body ||
+                    announcements[announcementIdx]?.content ||
+                    ''}
+                </Typography>
+                {announcements.length > 1 && (
+                  <div className={classes.reminderDots}>
+                    {announcements.map((_: any, i: number) => (
+                      <div
+                        key={i}
+                        className={
+                          i === announcementIdx
+                            ? classes.dotActive
+                            : classes.dot
+                        }
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => setAnnouncementIdx(i)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <Typography className={classes.reminderTitle}>
+                  Class &amp; Assessment Reminders
+                </Typography>
+                <Typography className={classes.reminderText}>
+                  Stay on top of your schedule. Upcoming classes and exam dates
+                  are now highlighted in your dashboard to help you plan ahead.
+                </Typography>
+                <div className={classes.reminderDots}>
+                  <div className={classes.dotActive} />
+                  <div className={classes.dot} />
+                  <div className={classes.dot} />
+                </div>
+              </>
+            )}
           </div>
 
           {/* My Modules */}
@@ -449,15 +497,10 @@ const StudentDashboard = () => {
                       `${localRoutes.myCourses}/${en.courseId || en.id}`,
                     )
                   }
-                  style={{ background: i % 2 === 0 ? '#1f2025' : '#2a2d35' }}
+                  style={{ background: i % 2 === 0 ? '#364153' : '#2d3a4a' }}
                 >
                   <div className={classes.moduleIconWrap}>
-                    <MenuBookIcon
-                      style={{
-                        fontSize: 20,
-                        color: COURSE_COLORS[i % COURSE_COLORS.length],
-                      }}
-                    />
+                    <MenuBookIcon style={{ fontSize: 22, color: '#ffffff' }} />
                   </div>
                   <div className={classes.moduleName}>
                     {en.courseName || en.name || 'Module'}

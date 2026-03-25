@@ -121,6 +121,9 @@ export const localRoutes = {
   myAssessments: '/my-assessments',
   myRequests: '/my-requests',
   workshops: '/workshops',
+  myTimetable: '/my-timetable',
+  chatsInquiries: '/chats',
+  studentCourses: '/student-courses',
 
   // Attendance
   attendance: '/admin/attendance',
@@ -216,7 +219,7 @@ export const remoteRoutes = {
   dayOff: `${apiBaseUrl}/api/classes/dayoff`,
 
   reports: `${apiBaseUrl}/api/reports`,
-  reportsSubmit: `${apiBaseUrl}/api/reports/submit`,
+  // reportsSubmit is dynamic: use `${remoteRoutes.reports}/${reportId}/submissions`
   reportsCategories: `${apiBaseUrl}/api/reports/category`,
 
   studentsAvatar: `${apiBaseUrl}/api/students/student/avatar`,

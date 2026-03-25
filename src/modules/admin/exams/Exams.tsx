@@ -200,7 +200,7 @@ const Exams = () => {
   const handleViewResults = (exam: any) => {
     setSelectedExam(exam);
     get(
-      `${remoteRoutes.examResults}?examId=${exam.id}`,
+      `${remoteRoutes.exams}/${exam.id}`,
       (data: any[]) => setExamResults(Array.isArray(data) ? data : []),
       undefined,
       undefined,

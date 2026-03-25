@@ -5,7 +5,7 @@ import Grid from '@material-ui/core/Grid';
 import { Box } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import Divider from '@material-ui/core/Divider';
-import { reqEmail, reqObject, reqString } from '../../data/validations';
+import { reqEmail, reqString } from '../../data/validations';
 import {
   ageCategories,
   civilStatusCategories,
@@ -16,17 +16,11 @@ import XForm from '../../components/forms/XForm';
 import XTextInput from '../../components/inputs/XTextInput';
 import XSelectInput from '../../components/inputs/XSelectInput';
 import { hasValue, toOptions } from '../../components/inputs/inputHelpers';
-
 import { remoteRoutes } from '../../data/constants';
 import { post } from '../../utils/ajax';
 import Toast from '../../utils/Toast';
 import XRadioInput from '../../components/inputs/XRadioInput';
-import { XRemoteSelect } from '../../components/inputs/XRemoteSelect';
 import { getDayList, getMonthsList } from '../../utils/dateHelpers';
-import { ICreatePersonDto } from '../contacts/types';
-import { XMapsInput } from '../../components/inputs/XMapsInput';
-import { parseGooglePlace } from '../../components/plain-inputs/PMapsInput';
-import XRemoteSelectLoadOnOpen from '../../components/inputs/XRemoteSelectLoadOnOpen';
 
 interface IProps {
   data: any | null;
@@ -42,7 +36,6 @@ const schema = yup.object().shape({
   birthMonth: reqString,
   civilStatus: reqString,
   ageGroup: reqString,
-  hubLocation: reqObject,
   email: reqEmail,
   phone: reqString,
   interestedInCourses: reqString,
@@ -51,8 +44,7 @@ const schema = yup.object().shape({
 const initialValues = {
   hubName: '',
   firstName: '',
-  middleName: '',
-  lastName: '',
+  otherNames: '',
   birthDay: '',
   birthMonth: '',
   gender: '',
@@ -60,8 +52,6 @@ const initialValues = {
   ageGroup: '',
   occupation: '',
   residence: '',
-  interestedCourse: null,
-  hubLocation: null,
   email: '',
   phone: '',
   interestedInCourses: '',
@@ -69,19 +59,15 @@ const initialValues = {
 };
 
 const processName = (name: string): string[] => {
-  const [lastName, ...otherNames] = name.split(' ');
-  if (hasValue(otherNames)) {
-    return [lastName, otherNames.join(' ')];
+  const [lastName, ...rest] = name.split(' ');
+  if (hasValue(rest)) {
+    return [lastName, rest.join(' ')];
   }
   return [lastName];
 };
 
 const RegisterForm = ({ done }: IProps) => {
-  // Does student want to enroll in multiple courses
   const [wantsMultipleCourses, setWantsMultipleCourses] = useState(false);
-
-  // The student's selected hub name
-  const [selectedHub, setSelectedHub] = useState('');
 
   function handleSubmit(values: any, actions: FormikHelpers<any>) {
     const [lastName, middleName] = processName(values.otherNames);
@@ -96,9 +82,7 @@ const RegisterForm = ({ done }: IProps) => {
       civilStatus: values.civilStatus,
       ageGroup: values.ageGroup,
       occupation: values.occupation,
-      residence: parseGooglePlace(values.residence),
-      interestedCourseId: values.interestedCourse?.id,
-      hubLocationId: values.hubLocation.id,
+      residence: values.residence,
       email: values.email,
       phone: values.phone,
       interestedInCourses: values.interestedInCourses,
@@ -108,7 +92,7 @@ const RegisterForm = ({ done }: IProps) => {
     post(
       remoteRoutes.register,
       toSave,
-      (data) => {
+      () => {
         Toast.info(
           'Registration successful! Welcome to Elevate Academy. Please check your email for login instructions.',
         );
@@ -122,24 +106,8 @@ const RegisterForm = ({ done }: IProps) => {
     );
   }
 
-  // Handle course interest selection
   const changeCourseInterest = (value: any) => {
-    value === 'Multiple'
-      ? setWantsMultipleCourses(true)
-      : setWantsMultipleCourses(false);
-  };
-
-  const isHubNameValid = () => {
-    if (!selectedHub) {
-      Toast.error('Please select a valid hub location');
-    }
-  };
-
-  const saveHubName = (event: any) => {
-    const hubName: string = event.target.value;
-    if (hubName !== '') {
-      setSelectedHub(hubName.toLowerCase().replace(/\s/g, ''));
-    }
+    setWantsMultipleCourses(value === 'Multiple');
   };
 
   return (
@@ -150,12 +118,14 @@ const RegisterForm = ({ done }: IProps) => {
     >
       <div style={{ padding: 8 }}>
         <Grid spacing={2} container className="min-width-100">
+          {/* ── Student Information ── */}
           <Grid item xs={12}>
             <Box pt={2}>
               <Typography variant="caption">Student Information</Typography>
             </Box>
             <Divider />
           </Grid>
+
           <Grid item xs={12}>
             <XSelectInput
               name="hubName"
@@ -171,6 +141,7 @@ const RegisterForm = ({ done }: IProps) => {
               margin="none"
             />
           </Grid>
+
           <Grid item xs={12} md={6}>
             <XTextInput
               name="firstName"
@@ -189,6 +160,7 @@ const RegisterForm = ({ done }: IProps) => {
               margin="none"
             />
           </Grid>
+
           <Grid item xs={12} md={6}>
             <Box pt={1} pl={1}>
               <XRadioInput
@@ -207,6 +179,7 @@ const RegisterForm = ({ done }: IProps) => {
               margin="none"
             />
           </Grid>
+
           <Grid item xs={12} md={4}>
             <XSelectInput
               name="ageGroup"
@@ -235,10 +208,11 @@ const RegisterForm = ({ done }: IProps) => {
             />
           </Grid>
 
+          {/* ── Contact & Course Information ── */}
           <Grid item xs={12}>
             <Box pt={2}>
               <Typography variant="caption">
-                Contact & Course Information
+                Contact &amp; Course Information
               </Typography>
             </Box>
             <Divider />
@@ -262,6 +236,7 @@ const RegisterForm = ({ done }: IProps) => {
               margin="none"
             />
           </Grid>
+
           <Grid item xs={12} md={6}>
             <XSelectInput
               name="interestedInCourses"
@@ -287,7 +262,7 @@ const RegisterForm = ({ done }: IProps) => {
               />
             </Box>
           </Grid>
-          {/* Field appears if student wants multiple courses */}
+
           {wantsMultipleCourses && (
             <Grid item xs={12}>
               <XTextInput
@@ -300,13 +275,15 @@ const RegisterForm = ({ done }: IProps) => {
               />
             </Grid>
           )}
+
           <Grid item xs={12} md={6}>
-            <XMapsInput
+            <XTextInput
               name="residence"
               label="Current Address"
+              type="text"
               variant="outlined"
               margin="none"
-              placeholder="Type to search your address"
+              placeholder="e.g. Kampala, Uganda"
             />
           </Grid>
           <Grid item xs={12} md={6}>

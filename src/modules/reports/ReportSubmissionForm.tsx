@@ -128,7 +128,7 @@ const ReportSubmissionForm = () => {
 
       await new Promise((resolve, reject) => {
         post(
-          remoteRoutes.reportsSubmit,
+          `${remoteRoutes.reports}/${reportId}/submissions`,
           reportSubmissionData,
           (response: any) => resolve(response),
           (error: any) => reject(error),

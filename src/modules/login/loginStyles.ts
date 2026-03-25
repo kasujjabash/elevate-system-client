@@ -7,32 +7,34 @@ export const useLoginStyles = makeStyles((theme: Theme) =>
     container: {
       minHeight: '100vh',
       display: 'flex',
-      fontFamily: '"Plus Jakarta Sans", sans-serif',
+      fontFamily: '"Inter", "Plus Jakarta Sans", sans-serif',
     },
 
-    // Left panel — form side
+    // Left panel — form side (50% width), centers a max-width inner column
     leftPanel: {
-      flex: '0 0 480px',
+      flex: '0 0 50%',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'center',
-      padding: theme.spacing(6, 7),
+      alignItems: 'center',
+      padding: theme.spacing(6, 4),
       backgroundColor: '#ffffff',
+      overflowY: 'auto',
       [theme.breakpoints.down('sm')]: {
         flex: 1,
         padding: theme.spacing(4, 3),
       },
     },
 
-    // Right panel — brand/visual side
+    // Inner wrapper — constrains form width and adds side breathing room
+    formInner: {
+      width: '100%',
+      maxWidth: 400,
+    },
+
+    // Right panel — graduation photo (50% width)
     rightPanel: {
-      flex: 1,
-      background: 'linear-gradient(135deg, #1f2025 0%, #2d2f38 100%)',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: theme.spacing(6),
+      flex: '0 0 50%',
       position: 'relative',
       overflow: 'hidden',
       [theme.breakpoints.down('sm')]: {
@@ -40,193 +42,169 @@ export const useLoginStyles = makeStyles((theme: Theme) =>
       },
     },
 
-    gradientOrb1: {
+    // Photo fills the right panel
+    rightPhoto: {
       position: 'absolute',
-      width: 400,
-      height: 400,
-      borderRadius: '50%',
-      background:
-        'radial-gradient(circle, rgba(254,58,106,0.25) 0%, transparent 70%)',
-      top: '-100px',
-      right: '-100px',
-      pointerEvents: 'none',
-    },
-    gradientOrb2: {
-      position: 'absolute',
-      width: 300,
-      height: 300,
-      borderRadius: '50%',
-      background:
-        'radial-gradient(circle, rgba(254,140,69,0.2) 0%, transparent 70%)',
-      bottom: '-80px',
-      left: '-80px',
-      pointerEvents: 'none',
+      inset: 0,
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover' as any,
+      objectPosition: 'center top',
     },
 
-    rightContent: {
-      position: 'relative',
-      zIndex: 1,
-      textAlign: 'center',
-      maxWidth: 480,
-    },
-
-    rightBadge: {
-      display: 'inline-block',
-      background: 'linear-gradient(90deg, #fe3a6a 0%, #fe8c45 100%)',
-      color: '#fff',
-      fontSize: '11px',
-      fontWeight: 700,
-      letterSpacing: '1.5px',
-      textTransform: 'uppercase',
-      padding: '6px 16px',
-      borderRadius: 40,
-      marginBottom: theme.spacing(3),
-    },
-
-    rightHeading: {
-      color: '#ffffff',
-      fontFamily: '"Plus Jakarta Sans", sans-serif',
-      fontSize: '40px',
-      fontWeight: 700,
-      lineHeight: 1.15,
-      letterSpacing: '-0.5px',
-      marginBottom: theme.spacing(2),
-    },
-
-    rightHeadingAccent: {
-      background: 'linear-gradient(90deg, #fe3a6a, #fe8c45)',
-      WebkitBackgroundClip: 'text',
-      WebkitTextFillColor: 'transparent',
-    },
-
-    rightSubtitle: {
-      color: 'rgba(255,255,255,0.55)',
-      fontSize: '15px',
-      lineHeight: 1.7,
-      marginBottom: theme.spacing(5),
-    },
-
-    statsRow: {
-      display: 'flex',
-      justifyContent: 'center',
-      gap: theme.spacing(4),
-      marginTop: theme.spacing(4),
-    },
-
-    statItem: {
-      textAlign: 'center',
-    },
-
-    statNumber: {
-      color: '#ffffff',
-      fontSize: '28px',
-      fontWeight: 700,
-      fontFamily: '"Plus Jakarta Sans", sans-serif',
-      lineHeight: 1,
-    },
-
-    statLabel: {
-      color: 'rgba(255,255,255,0.45)',
-      fontSize: '12px',
-      marginTop: 4,
-      letterSpacing: '0.3px',
-    },
-
-    statDivider: {
-      width: 1,
-      backgroundColor: 'rgba(255,255,255,0.1)',
-      alignSelf: 'stretch',
-    },
-
-    // Left panel internals
-    logoMark: {
-      width: 36,
-      height: 36,
-      borderRadius: 10,
-      background: 'linear-gradient(90deg, #fe3a6a 0%, #fe8c45 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
+    // Logo at top of form panel
+    logoWrap: {
       marginBottom: theme.spacing(4),
     },
-
-    logoMarkInner: {
-      width: 16,
-      height: 16,
-      borderRadius: 4,
-      backgroundColor: 'rgba(255,255,255,0.9)',
+    logoImg: {
+      height: 56,
     },
 
+    // "era92 elevate" heading
     heading: {
-      fontFamily: '"Plus Jakarta Sans", sans-serif',
-      fontSize: '28px',
+      fontFamily: '"Inter", sans-serif',
+      fontSize: '20px',
       fontWeight: 700,
       color: '#1f2025',
-      letterSpacing: '-0.5px',
-      marginBottom: theme.spacing(0.5),
+      marginBottom: 4,
+      letterSpacing: '-0.2px',
     },
 
     subheading: {
-      fontSize: '14px',
+      fontSize: '13px',
       color: '#8a8f99',
       marginBottom: theme.spacing(4),
       fontWeight: 400,
     },
 
-    demoBox: {
-      backgroundColor: '#f8f7f5',
-      border: '1px solid #ece9e4',
-      borderRadius: 10,
-      padding: theme.spacing(1.5, 2),
-      marginBottom: theme.spacing(3),
-    },
-
-    demoTitle: {
-      fontSize: '11px',
-      fontWeight: 700,
-      color: '#8a8f99',
-      letterSpacing: '0.8px',
-      textTransform: 'uppercase',
-      marginBottom: 6,
-    },
-
-    demoRow: {
-      fontSize: '12px',
-      color: '#5a5e6b',
-      lineHeight: 1.8,
+    // "Enter your details to login"
+    formLabel: {
+      fontSize: '14px',
+      fontWeight: 600,
+      color: '#1f2025',
+      marginBottom: theme.spacing(2.5),
     },
 
     form: {
       width: '100%',
+      '& .MuiOutlinedInput-root': {
+        borderRadius: 8,
+        fontSize: 13,
+        backgroundColor: '#fff',
+      },
+      '& .MuiOutlinedInput-notchedOutline': {
+        borderColor: 'rgba(0,0,0,0.18)',
+      },
+      '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
+        borderColor: 'rgba(0,0,0,0.35)',
+      },
+      '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+        borderColor: '#90A1B9',
+        borderWidth: 1,
+      },
+      // Keep label centred in the field until focused/filled
+      '& .MuiInputLabel-outlined': {
+        fontSize: 13,
+        transform: 'translate(14px, 14px) scale(1)',
+      },
+      '& .MuiInputLabel-outlined.MuiInputLabel-shrink': {
+        transform: 'translate(14px, -6px) scale(0.85)',
+      },
+      // Uniform input height & vertically centred text
+      '& .MuiInputBase-input': {
+        fontSize: 13,
+        padding: '13px 14px',
+      },
     },
 
-    fieldLabel: {
-      fontSize: '13px',
-      fontWeight: 600,
-      color: '#1f2025',
-      marginBottom: 6,
-      display: 'block',
+    // Checkbox row
+    rememberRow: {
+      display: 'flex',
+      alignItems: 'center',
+      marginTop: theme.spacing(1),
+      marginBottom: theme.spacing(2),
+      fontSize: 13,
+      color: '#5a5e6b',
     },
 
     submit: {
-      marginTop: theme.spacing(3),
+      marginTop: theme.spacing(1),
       marginBottom: theme.spacing(2),
-      padding: theme.spacing(1.5),
-      fontSize: '15px',
-      fontWeight: 700,
-      borderRadius: 10,
-      background:
-        'linear-gradient(90deg, #fe3a6a 0%, #ff4a39 50%, #fe8c45 100%)',
+      padding: theme.spacing(1.4),
+      fontSize: '14px',
+      fontWeight: 600,
+      borderRadius: 8,
+      background: '#90A1B9',
       color: '#fff',
       boxShadow: 'none',
+      letterSpacing: '0.3px',
       '&:hover': {
-        background:
-          'linear-gradient(90deg, #d4183f 0%, #d93020 50%, #d4712e 100%)',
-        boxShadow: '0 4px 20px rgba(254,58,106,0.35)',
+        background: '#7a8fa8',
+        boxShadow: 'none',
       },
       '&:disabled': {
-        background: '#e0e0e0',
-        color: '#aaa',
+        background: '#c0c4cc',
+        color: '#fff',
+      },
+    },
+
+    // Override XForm's primary button + field borders on register page
+    registerFormWrap: {
+      // Submit button
+      '& .MuiButton-containedPrimary': {
+        backgroundColor: '#90A1B9 !important',
+        boxShadow: 'none !important',
+        borderRadius: '8px !important',
+        fontWeight: 600,
+        fontSize: 14,
+        padding: '10px 28px',
+        color: '#fff !important',
+        '&:hover': {
+          backgroundColor: '#7a8fa8 !important',
+          boxShadow: 'none !important',
+        },
+        '&.Mui-disabled': {
+          backgroundColor: '#c0c4cc !important',
+        },
+      },
+      // Outlined input fields — uniform border + radius
+      '& .MuiOutlinedInput-root': {
+        borderRadius: 8,
+        fontSize: 13,
+        backgroundColor: '#fff',
+      },
+      '& .MuiOutlinedInput-notchedOutline': {
+        borderColor: 'rgba(0,0,0,0.18)',
+      },
+      '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
+        borderColor: 'rgba(0,0,0,0.35)',
+      },
+      '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+        borderColor: '#90A1B9',
+        borderWidth: 1,
+      },
+      '& .MuiInputLabel-outlined': {
+        fontSize: 13,
+        transform: 'translate(14px, 14px) scale(1)',
+      },
+      '& .MuiInputLabel-outlined.MuiInputLabel-shrink': {
+        transform: 'translate(14px, -6px) scale(0.85)',
+      },
+      '& .MuiInputBase-input': {
+        fontSize: 13,
+        padding: '13px 14px',
+      },
+      '& .MuiSelect-outlined.MuiSelect-outlined': {
+        padding: '13px 14px',
+        fontSize: 13,
+      },
+      // Section divider labels
+      '& .MuiTypography-caption': {
+        fontSize: 11,
+        fontWeight: 700,
+        color: '#8a8f99',
+        textTransform: 'uppercase',
+        letterSpacing: '0.06em',
       },
     },
 
@@ -234,11 +212,11 @@ export const useLoginStyles = makeStyles((theme: Theme) =>
       display: 'flex',
       justifyContent: 'center',
       gap: theme.spacing(3),
-      marginTop: theme.spacing(1),
+      marginTop: theme.spacing(0.5),
     },
 
     link: {
-      color: '#fe3a6a',
+      color: '#5a6478',
       fontSize: '13px',
       fontWeight: 500,
       textDecoration: 'none',
@@ -248,7 +226,41 @@ export const useLoginStyles = makeStyles((theme: Theme) =>
       },
     },
 
-    // keep these for compat with other login pages
+    otherLink: {
+      color: '#b0b5bf',
+      fontSize: '12px',
+      fontWeight: 400,
+      textDecoration: 'none',
+      cursor: 'pointer',
+      textAlign: 'center' as any,
+      marginTop: theme.spacing(2),
+      display: 'block',
+      '&:hover': { textDecoration: 'underline' },
+    },
+
+    // ── Compat stubs (keep to avoid breaking other login-related pages) ──
+    gradientOrb1: { display: 'none' },
+    gradientOrb2: { display: 'none' },
+    rightContent: { display: 'none' },
+    rightBadge: { display: 'none' },
+    rightHeading: { display: 'none' },
+    rightHeadingAccent: {},
+    rightSubtitle: { display: 'none' },
+    statsRow: { display: 'none' },
+    statItem: {},
+    statNumber: {},
+    statLabel: {},
+    statDivider: {},
+    logoMark: { display: 'none' },
+    logoMarkInner: {},
+    demoBox: { display: 'none' },
+    demoTitle: {},
+    demoRow: {},
+    fieldLabel: {
+      fontSize: '13px',
+      fontWeight: 600,
+      color: '#1f2025',
+    },
     main: { display: 'block' },
     paper: { display: 'block' },
     avatar: { display: 'none' },

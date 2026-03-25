@@ -80,6 +80,9 @@ const AttendanceCode = React.lazy(() => import('./student/AttendanceCode'));
 const MyAssessments = React.lazy(() => import('./student/MyAssessments'));
 const MyRequests = React.lazy(() => import('./student/MyRequests'));
 const Workshops = React.lazy(() => import('./student/Workshops'));
+const MyTimetable = React.lazy(() => import('./student/MyTimetable'));
+const ChatsInquiries = React.lazy(() => import('./student/ChatsInquiries'));
+const StudentCourses = React.lazy(() => import('./student/StudentCourses'));
 
 const Testing = () => (
   <Layout>
@@ -121,6 +124,9 @@ const ContentSwitch = () => {
         <Route path={localRoutes.myAssessments} component={MyAssessments} />
         <Route path={localRoutes.myRequests} component={MyRequests} />
         <Route path={localRoutes.workshops} component={Workshops} />
+        <Route path={localRoutes.myTimetable} component={MyTimetable} />
+        <Route path={localRoutes.chatsInquiries} component={ChatsInquiries} />
+        <Route path={localRoutes.studentCourses} component={StudentCourses} />
 
         <Route
           path={localRoutes.calendar}

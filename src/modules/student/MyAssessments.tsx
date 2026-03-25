@@ -22,9 +22,9 @@ import { get } from '../../utils/ajax';
 
 const tabs = [
   'All Results',
-  'MA: Missed',
+  'MA: Missed Assessments',
   'RE: Retake',
-  'EXL: Exempted',
+  'EXL Exempted',
   'OT: Others',
 ];
 
@@ -59,6 +59,15 @@ const MyAssessments = () => {
   return (
     <Layout>
       <Box p={3}>
+        {/* Breadcrumb */}
+        <Box mb={1} style={{ fontSize: 13, color: '#8a8f99' }}>
+          <span>Home</span>
+          <span style={{ margin: '0 6px', color: '#c4c8d0' }}>›</span>
+          <span>Students</span>
+          <span style={{ margin: '0 6px', color: '#c4c8d0' }}>›</span>
+          <span style={{ color: '#fe3a6a' }}>Results</span>
+        </Box>
+
         {/* Header */}
         <Box
           display="flex"
@@ -203,6 +212,82 @@ const MyAssessments = () => {
             </TableBody>
           </Table>
         </TableContainer>
+
+        {/* Pagination */}
+        {results.length > 0 && (
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            mt={2}
+            style={{ fontSize: 13, color: '#5a5e6b' }}
+          >
+            <Box display="flex" alignItems="center" style={{ gap: 8 }}>
+              <span
+                style={{
+                  width: 28,
+                  height: 28,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid rgba(0,0,0,0.12)',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  fontSize: 16,
+                }}
+              >
+                ‹
+              </span>
+              <span
+                style={{
+                  width: 28,
+                  height: 28,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: '#fe3a6a',
+                  color: '#fff',
+                  borderRadius: 6,
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
+                1
+              </span>
+              <span
+                style={{
+                  width: 28,
+                  height: 28,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid rgba(0,0,0,0.12)',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  fontSize: 16,
+                }}
+              >
+                ›
+              </span>
+              <span style={{ marginLeft: 8 }}>
+                Go to:{' '}
+                <input
+                  defaultValue="1"
+                  style={{
+                    width: 40,
+                    border: '1px solid rgba(0,0,0,0.15)',
+                    borderRadius: 4,
+                    padding: '2px 6px',
+                    fontSize: 12,
+                    textAlign: 'center',
+                  }}
+                />
+              </span>
+              <span>| 20/page</span>
+            </Box>
+            <span>Total {results.length}</span>
+          </Box>
+        )}
       </Box>
     </Layout>
   );
