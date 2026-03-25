@@ -1,9 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { Button, Grid, LinearProgress, Typography } from '@material-ui/core';
+import React, { useEffect, useState, useMemo } from 'react';
+import {
+  Button,
+  Chip,
+  Grid,
+  InputAdornment,
+  LinearProgress,
+  TextField,
+  Typography,
+} from '@material-ui/core';
 import { makeStyles, Theme } from '@material-ui/core/styles';
 import SchoolIcon from '@material-ui/icons/School';
-import PersonIcon from '@material-ui/icons/Person';
-
+import SearchIcon from '@material-ui/icons/Search';
+import CalendarTodayIcon from '@material-ui/icons/CalendarToday';
+import ViewModuleIcon from '@material-ui/icons/ViewModule';
+import MenuBookIcon from '@material-ui/icons/MenuBook';
 import { useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
@@ -15,95 +25,62 @@ import { get } from '../../utils/ajax';
 const CORAL = '#fe3a6a';
 const ORANGE = '#fe8c45';
 const DARK = '#1f2025';
+const COURSE_COLORS = [
+  '#6366f1',
+  '#0ea5e9',
+  '#10b981',
+  '#f59e0b',
+  '#ef4444',
+  '#8b5cf6',
+];
 
 const useStyles = makeStyles((theme: Theme) => ({
-  root: { padding: theme.spacing(3), background: '#f8f7f5', minHeight: '100%' },
-  pageTitle: {
-    fontSize: 22,
-    fontWeight: 800,
-    color: DARK,
-    letterSpacing: '-0.02em',
-  },
-  pageSubtitle: {
-    fontSize: 13,
-    color: '#8a8f99',
-    marginTop: 2,
-    marginBottom: theme.spacing(3),
-  },
+  root: { padding: theme.spacing(3), minHeight: '100%' },
 
-  card: {
+  // ── Programme header card ────────────────────────────────────────
+  programCard: {
     background: '#fff',
     borderRadius: 14,
-    border: '1px solid #ede8e3',
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column' as any,
-    transition: 'box-shadow 0.15s',
-    '&:hover': { boxShadow: '0 6px 24px rgba(0,0,0,0.09)' },
+    border: '1px solid rgba(0,0,0,0.08)',
+    padding: '20px 24px',
+    marginBottom: 20,
   },
-  cardTop: { padding: '18px 20px 16px', flex: 1 },
-  courseName: {
-    fontSize: 16,
+  programTitle: {
+    fontSize: 20,
     fontWeight: 700,
     color: DARK,
-    lineHeight: 1.3,
-    marginBottom: 8,
-  },
-  courseDesc: {
-    fontSize: 13,
-    color: '#6b7280',
-    lineHeight: 1.55,
-    marginBottom: 12,
-    display: '-webkit-box',
-    '-webkit-line-clamp': 2,
-    '-webkit-box-orient': 'vertical',
-    overflow: 'hidden',
-  } as any,
-  instructorRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 7,
-    marginBottom: 14,
-  },
-  instructorAvatar: {
-    width: 26,
-    height: 26,
-    borderRadius: '50%',
-    background: `linear-gradient(135deg, ${CORAL}, ${ORANGE})`,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 10,
-    fontWeight: 700,
-    color: '#fff',
-    flexShrink: 0,
-  },
-  instructorName: { fontSize: 12, fontWeight: 600, color: '#374151' },
-  progressSection: { marginTop: 4 },
-  progressRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
     marginBottom: 4,
   },
-  progressLabel: { fontSize: 12, color: '#6b7280' },
-  progressValue: { fontSize: 12, fontWeight: 700, color: CORAL },
-  progressBar: { borderRadius: 4, height: 6, backgroundColor: '#f3ede9' },
-  progressFill: { borderRadius: 4 },
-  cardFooter: {
-    borderTop: '1px solid #f3ede9',
-    padding: '10px 20px',
+  programDate: {
+    fontSize: 12,
+    color: '#8a8f99',
+    marginBottom: 12,
+  },
+  metaBadges: {
+    display: 'flex',
+    gap: 10,
+    marginBottom: 12,
+    flexWrap: 'wrap' as any,
+  },
+  metaBadge: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    background: '#fdfcfb',
-  },
-  statusBadge: {
-    fontSize: 11,
-    fontWeight: 700,
+    gap: 5,
+    background: 'rgba(254,58,106,0.07)',
+    color: CORAL,
     borderRadius: 20,
-    padding: '3px 10px',
+    padding: '4px 12px',
+    fontSize: 12,
+    fontWeight: 600,
   },
-  openBtn: {
+  programDesc: {
+    fontSize: 13,
+    color: '#5a5e6b',
+    lineHeight: 1.55,
+    marginBottom: 16,
+    maxWidth: 640,
+  },
+  chooseBtn: {
     background: `linear-gradient(90deg, ${CORAL} 0%, ${ORANGE} 100%)`,
     color: '#fff',
     borderRadius: 8,
@@ -111,26 +88,101 @@ const useStyles = makeStyles((theme: Theme) => ({
     textTransform: 'none' as any,
     boxShadow: 'none',
     fontSize: 13,
-    '&:hover': { opacity: 0.9 },
+    padding: '8px 20px',
+    '&:hover': { opacity: 0.9, boxShadow: 'none' },
   },
+
+  // ── Search ───────────────────────────────────────────────────────
+  searchBar: {
+    marginBottom: 24,
+    '& .MuiOutlinedInput-root': {
+      borderRadius: 10,
+      background: '#fff',
+      fontSize: 13,
+    },
+    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(0,0,0,0.1)' },
+  },
+
+  // ── Month group ──────────────────────────────────────────────────
+  monthLabel: {
+    fontSize: 16,
+    fontWeight: 700,
+    color: DARK,
+    marginBottom: 4,
+    marginTop: 8,
+  },
+  weekLabel: {
+    fontSize: 12,
+    color: '#8a8f99',
+    marginBottom: 16,
+  },
+
+  // ── Module card ──────────────────────────────────────────────────
+  moduleCard: {
+    background: '#fff',
+    borderRadius: 12,
+    border: '1px solid rgba(0,0,0,0.08)',
+    padding: '16px',
+    cursor: 'pointer',
+    transition: 'box-shadow 0.15s, transform 0.15s',
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column' as any,
+    '&:hover': {
+      boxShadow: '0 4px 18px rgba(0,0,0,0.10)',
+      transform: 'translateY(-2px)',
+    },
+  },
+  moduleIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 9,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    flexShrink: 0,
+  },
+  moduleName: {
+    fontSize: 13,
+    fontWeight: 700,
+    color: DARK,
+    lineHeight: 1.35,
+    marginBottom: 4,
+    flex: 1,
+  },
+  moduleCode: {
+    fontSize: 11,
+    color: '#8a8f99',
+    marginBottom: 10,
+  },
+  moduleFooter: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 'auto' as any,
+    paddingTop: 10,
+    borderTop: '1px solid rgba(0,0,0,0.05)',
+  },
+  progressWrap: { flex: 1, marginRight: 10 },
+  progressBar: { borderRadius: 4, height: 5, backgroundColor: '#f3ede9' },
+  progressValue: { fontSize: 11, fontWeight: 700, color: CORAL },
+  statusChip: {
+    fontSize: 10,
+    fontWeight: 700,
+    height: 20,
+    borderRadius: 10,
+  },
+
+  // ── Empty state ──────────────────────────────────────────────────
   emptyBox: {
     background: '#fff',
     borderRadius: 16,
-    border: '1px solid #ede8e3',
+    border: '1px solid rgba(0,0,0,0.08)',
     padding: '60px 24px',
     textAlign: 'center' as any,
   },
-  modulesMeta: { fontSize: 12, color: '#9ca3af', marginBottom: 10 },
 }));
-
-function initials(name: string) {
-  return (name || '')
-    .split(' ')
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase();
-}
 
 const MyCourses = () => {
   const classes = useStyles();
@@ -138,6 +190,7 @@ const MyCourses = () => {
   const user = useSelector((state: IState) => state.core.user);
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -154,24 +207,120 @@ const MyCourses = () => {
     );
   }, [user.contactId]);
 
-  if (loading) {
+  const filtered = useMemo(() => {
+    if (!search.trim()) return enrollments;
+    const q = search.toLowerCase();
+    return enrollments.filter((e: any) => {
+      const title = (
+        e.title ||
+        e.course?.title ||
+        e.group?.name ||
+        ''
+      ).toLowerCase();
+      const code = (
+        e.code ||
+        e.courseCode ||
+        e.course?.code ||
+        ''
+      ).toLowerCase();
+      return title.includes(q) || code.includes(q);
+    });
+  }, [enrollments, search]);
+
+  // Group modules by "month" (derived from code prefix like 1.x, 2.x)
+  const grouped = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    filtered.forEach((e: any) => {
+      const code = e.code || e.courseCode || e.course?.code || '';
+      const month = code
+        ? `Month ${Math.ceil(parseFloat(code) || 1)}`
+        : 'Month 1';
+      if (!map[month]) map[month] = [];
+      map[month].push(e);
+    });
+    // If no codes, put everything in Month 1
+    if (Object.keys(map).length === 0 && filtered.length > 0) {
+      map['Month 1'] = filtered;
+    }
+    return map;
+  }, [filtered]);
+
+  // Programme name from first enrollment
+  const programmeName =
+    enrollments[0]?.programmeName ||
+    enrollments[0]?.program?.name ||
+    enrollments[0]?.course?.programName ||
+    'Certificate Programme';
+
+  const totalModules = enrollments.length;
+
+  if (loading)
     return (
-      <Layout title="My Courses">
+      <Layout title="My Modules">
         <Loading />
       </Layout>
     );
-  }
 
   return (
-    <Layout title="My Courses">
+    <Layout title="My Modules">
       <div className={classes.root}>
-        <div className={classes.pageTitle}>My Courses</div>
-        <div className={classes.pageSubtitle}>
-          {enrollments.length} course{enrollments.length !== 1 ? 's' : ''}{' '}
-          enrolled
-        </div>
+        {/* Programme header */}
+        {enrollments.length > 0 && (
+          <div className={classes.programCard}>
+            <div className={classes.programTitle}>{programmeName}</div>
+            <div className={classes.programDate}>
+              {enrollments[0]?.startDate
+                ? new Date(enrollments[0].startDate).toLocaleDateString(
+                    'en-GB',
+                    { month: 'long', year: 'numeric' },
+                  )
+                : 'Current Programme'}
+            </div>
+            <div className={classes.metaBadges}>
+              <div className={classes.metaBadge}>
+                <CalendarTodayIcon style={{ fontSize: 13 }} />
+                {enrollments[0]?.durationMonths || '6'} Months
+              </div>
+              <div className={classes.metaBadge}>
+                <ViewModuleIcon style={{ fontSize: 13 }} />
+                {totalModules} module{totalModules !== 1 ? 's' : ''}
+              </div>
+            </div>
+            <div className={classes.programDesc}>
+              Your programme has {totalModules} module
+              {totalModules !== 1 ? 's' : ''}. Select the modules you'd like to
+              focus on this month.
+            </div>
+            <Button
+              variant="contained"
+              className={classes.chooseBtn}
+              onClick={() => history.push(localRoutes.catalog)}
+            >
+              Choose your Modules
+            </Button>
+          </div>
+        )}
 
-        {enrollments.length === 0 ? (
+        {/* Search */}
+        <TextField
+          fullWidth
+          variant="outlined"
+          size="small"
+          placeholder="Search modules by name or code..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className={classes.searchBar}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon style={{ fontSize: 18, color: '#8a8f99' }} />
+              </InputAdornment>
+            ),
+          }}
+        />
+
+        {/* Empty state */}
+        {enrollments.length === 0 && (
           <div className={classes.emptyBox}>
             <SchoolIcon style={{ fontSize: 56, color: '#d1d5db' }} />
             <Typography
@@ -182,7 +331,7 @@ const MyCourses = () => {
                 fontSize: 16,
               }}
             >
-              You haven't enrolled in any courses yet
+              You haven't enrolled in any modules yet
             </Typography>
             <Typography
               variant="body2"
@@ -192,137 +341,97 @@ const MyCourses = () => {
             </Typography>
             <Button
               variant="contained"
-              className={classes.openBtn}
+              className={classes.chooseBtn}
               onClick={() => history.push(localRoutes.catalog)}
             >
               Browse Course Catalog
             </Button>
           </div>
-        ) : (
-          <Grid container spacing={2}>
-            {enrollments.map((enrollment: any) => {
-              const title =
-                enrollment.title ||
-                enrollment.course?.title ||
-                enrollment.group?.name ||
-                'Course';
-              const description =
-                enrollment.description || enrollment.course?.description || '';
-              const instructor =
-                enrollment.instructor || enrollment.course?.instructor || '';
-              const progress = enrollment.progress || 0;
-              const moduleCount =
-                enrollment.moduleCount ?? enrollment.course?.moduleCount;
-              const courseId = enrollment.courseId || enrollment.course?.id;
-              const status = enrollment.status || 'active';
+        )}
 
-              return (
-                <Grid
-                  item
-                  xs={12}
-                  sm={6}
-                  md={4}
-                  key={enrollment.enrollmentId || enrollment.id}
-                >
-                  <div className={classes.card}>
-                    <div className={classes.cardTop}>
-                      <div className={classes.courseName}>{title}</div>
+        {/* Module groups */}
+        {Object.entries(grouped).map(([month, modules], gi) => (
+          <div key={month} style={{ marginBottom: 32 }}>
+            <div className={classes.monthLabel}>{month}</div>
+            <div className={classes.weekLabel}>Week 1–{modules.length}</div>
 
-                      {description ? (
-                        <div className={classes.courseDesc}>{description}</div>
-                      ) : null}
+            <Grid container spacing={2}>
+              {modules.map((enrollment: any, i: number) => {
+                const title =
+                  enrollment.title ||
+                  enrollment.course?.title ||
+                  enrollment.group?.name ||
+                  'Module';
+                const code =
+                  enrollment.code ||
+                  enrollment.courseCode ||
+                  enrollment.course?.code ||
+                  `${gi + 1}.${i + 1}`;
+                const progress = enrollment.progress || 0;
+                const courseId = enrollment.courseId || enrollment.course?.id;
+                const status = enrollment.status || 'active';
+                const color =
+                  COURSE_COLORS[(gi * 4 + i) % COURSE_COLORS.length];
 
-                      {instructor ? (
-                        <div className={classes.instructorRow}>
-                          <div className={classes.instructorAvatar}>
-                            {initials(instructor)}
-                          </div>
-                          <div>
-                            <div className={classes.instructorName}>
-                              {instructor}
-                            </div>
-                            <div style={{ fontSize: 10, color: '#9ca3af' }}>
-                              Instructor
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className={classes.instructorRow}>
-                          <PersonIcon
-                            style={{ fontSize: 16, color: '#d1d5db' }}
+                return (
+                  <Grid
+                    item
+                    xs={6}
+                    sm={4}
+                    md={3}
+                    key={enrollment.enrollmentId || enrollment.id || i}
+                  >
+                    <div
+                      className={classes.moduleCard}
+                      onClick={() =>
+                        courseId && history.push(`/my-courses/${courseId}`)
+                      }
+                    >
+                      <div
+                        className={classes.moduleIconWrap}
+                        style={{ background: `${color}18` }}
+                      >
+                        <MenuBookIcon style={{ fontSize: 18, color }} />
+                      </div>
+
+                      <div className={classes.moduleName}>{title}</div>
+                      <div className={classes.moduleCode}>{code}</div>
+
+                      <div className={classes.moduleFooter}>
+                        <div className={classes.progressWrap}>
+                          <LinearProgress
+                            variant="determinate"
+                            value={progress}
+                            classes={{ root: classes.progressBar }}
+                            style={{ backgroundColor: '#f3ede9' }}
                           />
-                          <span
-                            style={{
-                              fontSize: 12,
-                              color: '#c9c4bf',
-                              fontStyle: 'italic',
-                            }}
-                          >
-                            No instructor assigned
-                          </span>
                         </div>
-                      )}
-
-                      {moduleCount != null && (
-                        <div className={classes.modulesMeta}>
-                          {moduleCount} week{moduleCount !== 1 ? 's' : ''}
-                        </div>
-                      )}
-
-                      <div className={classes.progressSection}>
-                        <div className={classes.progressRow}>
-                          <span className={classes.progressLabel}>
-                            Progress
-                          </span>
-                          <span className={classes.progressValue}>
-                            {progress}%
-                          </span>
-                        </div>
-                        <LinearProgress
-                          variant="determinate"
-                          value={progress}
-                          classes={{
-                            root: classes.progressBar,
-                            bar: classes.progressFill,
-                          }}
-                          style={{ backgroundColor: '#f3ede9' }}
+                        <Chip
+                          label={
+                            status === 'completed' ? 'Done' : `${progress}%`
+                          }
+                          size="small"
+                          className={classes.statusChip}
+                          style={
+                            status === 'completed'
+                              ? {
+                                  background: 'rgba(16,185,129,0.1)',
+                                  color: '#10b981',
+                                }
+                              : {
+                                  background: 'rgba(254,58,106,0.08)',
+                                  color: CORAL,
+                                }
+                          }
                         />
                       </div>
                     </div>
-
-                    <div className={classes.cardFooter}>
-                      <span
-                        className={classes.statusBadge}
-                        style={
-                          status === 'completed'
-                            ? {
-                                background: 'rgba(16,185,129,0.1)',
-                                color: '#10b981',
-                              }
-                            : {
-                                background: 'rgba(254,58,106,0.08)',
-                                color: CORAL,
-                              }
-                        }
-                      >
-                        {status === 'completed' ? 'Completed' : 'In Progress'}
-                      </span>
-                      <Button
-                        size="small"
-                        className={classes.openBtn}
-                        onClick={() => {
-                          if (courseId) history.push(`/my-courses/${courseId}`);
-                        }}
-                      >
-                        Open →
-                      </Button>
-                    </div>
-                  </div>
-                </Grid>
-              );
-            })}
-          </Grid>
-        )}
+                  </Grid>
+                );
+              })}
+            </Grid>
+          </div>
+        ))}
       </div>
     </Layout>
   );
