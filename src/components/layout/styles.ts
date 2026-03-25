@@ -2,7 +2,7 @@ import { createStyles, makeStyles, Theme } from '@material-ui/core';
 import { themeBackground } from '../../theme/custom-colors';
 
 export const drawerWidth = 240;
-export const navBackgroundColor = '#1f2025';
+export const navBackgroundColor = '#ffffff';
 export const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     root: {
@@ -45,7 +45,7 @@ export const useStyles = makeStyles((theme: Theme) =>
     },
     drawerPaper: {
       width: drawerWidth,
-      backgroundColor: navBackgroundColor,
+      backgroundColor: 'transparent',
       borderRight: 'none',
     },
     content: {

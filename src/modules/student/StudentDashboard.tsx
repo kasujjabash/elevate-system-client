@@ -1,23 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Box,
-  Card,
-  CardContent,
-  Chip,
-  Grid,
-  IconButton,
-  LinearProgress,
-  Typography,
-} from '@material-ui/core';
+import { Card, IconButton, Typography, Chip } from '@material-ui/core';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
-import CheckCircleIcon from '@material-ui/icons/CheckCircle';
-import EventNoteIcon from '@material-ui/icons/EventNote';
-import SchoolIcon from '@material-ui/icons/School';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import ChevronRightIcon from '@material-ui/icons/ChevronRight';
-import AssignmentIcon from '@material-ui/icons/Assignment';
-import AccessTimeIcon from '@material-ui/icons/AccessTime';
-import LocationOnIcon from '@material-ui/icons/LocationOn';
+import MenuBookIcon from '@material-ui/icons/MenuBook';
+import LiveTvIcon from '@material-ui/icons/LiveTv';
 import {
   format,
   startOfMonth,
@@ -28,62 +15,174 @@ import {
   addMonths,
   subMonths,
   isSameMonth,
-  isSameDay,
   isToday,
-  parseISO,
+  subDays,
 } from 'date-fns';
+import { Bar } from 'react-chartjs-2';
 import { useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import Loading from '../../components/Loading';
 import { localRoutes, remoteRoutes } from '../../data/constants';
 import { IState } from '../../data/types';
-import { get, search } from '../../utils/ajax';
+import { get } from '../../utils/ajax';
 
-const CAL_WIDTH = 280;
-const COURSE_COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444'];
-const DOW = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-
-const toMinutes = (t: string) => {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + m;
-};
-const formatTime = (t: string) => {
-  const [h, m] = t.split(':').map(Number);
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
-};
-const isSessionInProgress = (s: any) => {
-  const now = new Date();
-  if (now.getDay() !== s.dayOfWeek) return false;
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  return nowMin >= toMinutes(s.startTime) && nowMin < toMinutes(s.endTime);
-};
+const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     shell: {
       display: 'flex',
-      alignItems: 'flex-start',
       gap: 24,
       minHeight: '100%',
+      alignItems: 'flex-start',
       [theme.breakpoints.down('sm')]: { flexDirection: 'column' },
     },
-    calPanel: {
-      width: CAL_WIDTH,
+    main: { flex: 1, minWidth: 0 },
+    sidebar: {
+      width: 280,
       flexShrink: 0,
-      position: 'sticky' as any,
-      top: 0,
-      [theme.breakpoints.down('sm')]: {
-        width: '100%',
-        position: 'static' as any,
+      [theme.breakpoints.down('sm')]: { width: '100%' },
+    },
+
+    // ── Reminders banner ──────────────────────────────────────────
+    reminderBanner: {
+      borderRadius: 14,
+      background: 'linear-gradient(120deg, #fe3a6a 0%, #fe6a45 100%)',
+      padding: '20px 24px',
+      marginBottom: 24,
+      position: 'relative' as any,
+      overflow: 'hidden',
+      color: '#fff',
+      minHeight: 100,
+    },
+    reminderTitle: {
+      fontWeight: 700,
+      fontSize: 16,
+      color: '#fff',
+      marginBottom: 6,
+    },
+    reminderText: {
+      fontSize: 13,
+      color: 'rgba(255,255,255,0.85)',
+      lineHeight: 1.5,
+      maxWidth: '75%',
+    },
+    reminderDots: {
+      display: 'flex',
+      gap: 5,
+      marginTop: 14,
+    },
+    dot: {
+      width: 6,
+      height: 6,
+      borderRadius: '50%',
+      background: 'rgba(255,255,255,0.4)',
+    },
+    dotActive: {
+      width: 18,
+      height: 6,
+      borderRadius: 3,
+      background: '#fff',
+    },
+    bannerDecor: {
+      position: 'absolute' as any,
+      right: -10,
+      top: -20,
+      width: 140,
+      height: 140,
+      borderRadius: '50%',
+      background: 'rgba(255,255,255,0.08)',
+    },
+    bannerDecor2: {
+      position: 'absolute' as any,
+      right: 60,
+      bottom: -40,
+      width: 100,
+      height: 100,
+      borderRadius: '50%',
+      background: 'rgba(255,255,255,0.06)',
+    },
+
+    // ── Section titles ────────────────────────────────────────────
+    sectionTitle: {
+      fontSize: 15,
+      fontWeight: 700,
+      color: '#1f2025',
+      marginBottom: 14,
+    },
+
+    // ── Module cards ──────────────────────────────────────────────
+    modulesRow: {
+      display: 'flex',
+      gap: 14,
+      overflowX: 'auto' as any,
+      paddingBottom: 6,
+      '&::-webkit-scrollbar': { height: 4 },
+      '&::-webkit-scrollbar-thumb': {
+        background: 'rgba(0,0,0,0.12)',
+        borderRadius: 4,
       },
     },
+    moduleCard: {
+      flexShrink: 0,
+      width: 200,
+      borderRadius: 14,
+      background: '#1f2025',
+      cursor: 'pointer',
+      padding: '18px 16px 16px',
+      transition: 'transform 0.15s',
+      '&:hover': { transform: 'translateY(-2px)' },
+    },
+    moduleIconWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: 10,
+      background: 'rgba(255,255,255,0.12)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 14,
+    },
+    moduleName: {
+      fontSize: 13,
+      fontWeight: 700,
+      color: '#ffffff',
+      lineHeight: 1.3,
+      marginBottom: 4,
+    },
+    moduleCode: {
+      fontSize: 11,
+      color: 'rgba(255,255,255,0.5)',
+    },
+    emptyModules: {
+      padding: '30px 0',
+      textAlign: 'center' as any,
+      color: '#b0b5bf',
+      fontSize: 13,
+    },
+
+    // ── Attendance chart ──────────────────────────────────────────
+    chartCard: {
+      borderRadius: 14,
+      border: '1px solid rgba(0,0,0,0.07)',
+      padding: '18px 20px',
+      marginTop: 24,
+      boxShadow: 'none',
+    },
+    chartDateRange: {
+      fontSize: 11,
+      color: '#8a8f99',
+      marginBottom: 16,
+    },
+
+    // ── Calendar ──────────────────────────────────────────────────
     calCard: {
       borderRadius: 14,
       border: '1px solid rgba(0,0,0,0.07)',
-      boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
       overflow: 'hidden',
+      boxShadow: 'none',
+      marginBottom: 16,
     },
     calHeader: {
       display: 'flex',
@@ -93,15 +192,11 @@ const useStyles = makeStyles((theme: Theme) =>
       borderBottom: '1px solid rgba(0,0,0,0.06)',
     },
     calMonthLabel: { fontSize: 14, fontWeight: 700, color: '#1f2025' },
-    calNavBtn: {
-      padding: 4,
-      color: '#8a8f99',
-      '&:hover': { color: '#1f2025' },
-    },
+    calNavBtn: { padding: 4, color: '#8a8f99' },
     calGrid: {
       display: 'grid',
       gridTemplateColumns: 'repeat(7, 1fr)',
-      padding: '10px 12px 6px',
+      padding: '10px 12px 8px',
       gap: 1,
     },
     calDayName: {
@@ -109,18 +204,15 @@ const useStyles = makeStyles((theme: Theme) =>
       fontSize: 10,
       fontWeight: 700,
       color: '#b0b5bf',
-      letterSpacing: '0.05em',
-      textTransform: 'uppercase' as any,
+      letterSpacing: '0.04em',
       paddingBottom: 6,
     },
     calDayCell: {
       display: 'flex',
-      flexDirection: 'column' as any,
       alignItems: 'center',
-      padding: '2px 0',
+      justifyContent: 'center',
+      padding: '3px 0',
       cursor: 'pointer',
-      borderRadius: 8,
-      '&:hover $calDayNum': { background: 'rgba(0,0,0,0.05)' },
     },
     calDayNum: {
       width: 28,
@@ -129,10 +221,11 @@ const useStyles = makeStyles((theme: Theme) =>
       alignItems: 'center',
       justifyContent: 'center',
       borderRadius: '50%',
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: 500,
       color: '#1f2025',
       transition: 'background 0.1s',
+      '&:hover': { background: 'rgba(0,0,0,0.05)' },
     },
     calDayToday: {
       background:
@@ -140,163 +233,58 @@ const useStyles = makeStyles((theme: Theme) =>
       color: '#fff !important',
       fontWeight: '700 !important' as any,
     },
-    calDaySelected: {
-      background: 'rgba(254,58,106,0.12)',
-      color: '#fe3a6a',
-      fontWeight: 700,
-    },
-    calDayOtherMonth: { opacity: 0.25 },
-    dotsRow: { display: 'flex', gap: 2, marginTop: 2 },
-    dotClass: {
-      width: 4,
-      height: 4,
-      borderRadius: '50%',
-      background: '#6366f1',
-    },
-    dotAssign: {
-      width: 4,
-      height: 4,
-      borderRadius: '50%',
-      background: '#fe3a6a',
-    },
+    calDayOtherMonth: { opacity: 0.2 },
 
-    dayPanel: {
-      background: '#fafafa',
-      borderTop: '1px solid rgba(0,0,0,0.06)',
-      padding: '12px 16px 14px',
+    // ── Today's Class ─────────────────────────────────────────────
+    todayCard: {
+      borderRadius: 14,
+      border: '1px solid rgba(0,0,0,0.07)',
+      padding: '16px',
+      boxShadow: 'none',
     },
-    dayPanelLabel: {
-      fontSize: 11,
+    todayTitle: {
+      fontSize: 14,
       fontWeight: 700,
-      color: '#8a8f99',
-      letterSpacing: '0.06em',
-      textTransform: 'uppercase' as any,
-      marginBottom: 8,
+      color: '#1f2025',
+      marginBottom: 12,
     },
-    dayEventRow: {
+    classItem: {
       display: 'flex',
-      alignItems: 'flex-start',
-      gap: 8,
-      padding: '6px 0',
+      gap: 12,
+      padding: '10px 0',
       borderBottom: '1px solid rgba(0,0,0,0.05)',
       '&:last-child': { borderBottom: 'none', paddingBottom: 0 },
     },
-    dayEventDot: {
-      width: 8,
-      height: 8,
+    classAvatar: {
+      width: 36,
+      height: 36,
       borderRadius: '50%',
-      marginTop: 4,
+      background: 'linear-gradient(135deg, #fe3a6a 0%, #fe8c45 100%)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: '#fff',
+      fontSize: 12,
+      fontWeight: 700,
       flexShrink: 0,
     },
-    dayEventTitle: {
-      fontSize: 12,
+    className: {
+      fontSize: 13,
       fontWeight: 600,
       color: '#1f2025',
       lineHeight: 1.3,
     },
-    dayEventSub: { fontSize: 11, color: '#8a8f99' },
-    noEvents: {
+    classTime: { fontSize: 11, color: '#8a8f99', marginTop: 2 },
+    noClass: {
       fontSize: 12,
-      color: '#c4c9d4',
+      color: '#b0b5bf',
       textAlign: 'center' as any,
-      padding: '6px 0',
+      padding: '16px 0',
     },
-
-    content: { flex: 1, minWidth: 0, order: 1 },
-    welcome: {
-      fontSize: 22,
-      fontWeight: 700,
-      color: '#1f2025',
-      letterSpacing: '-0.02em',
-    },
-    welcomeSub: {
-      fontSize: 13,
-      color: '#8a8f99',
-      marginTop: 2,
-      marginBottom: theme.spacing(2),
-    },
-
-    // Next-class banner
-    nextClassBanner: {
-      borderRadius: 14,
-      padding: theme.spacing(2),
-      marginBottom: theme.spacing(2.5),
-      display: 'flex',
-      alignItems: 'center',
-      gap: 14,
-    },
-    pulseRing: {
-      width: 44,
-      height: 44,
-      borderRadius: '50%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
-      position: 'relative' as any,
-    },
-    '@keyframes ripple': {
-      '0%': { transform: 'scale(1)', opacity: 0.6 },
-      '100%': { transform: 'scale(2.2)', opacity: 0 },
-    },
-    '@keyframes pulse': {
-      '0%, 100%': { opacity: 1 },
-      '50%': { opacity: 0.5 },
-    },
-    ripple: {
-      position: 'absolute' as any,
-      width: '100%',
-      height: '100%',
-      borderRadius: '50%',
-      animation: '$ripple 1.4s ease-out infinite',
-    },
-    pulseDot: {
-      width: 10,
-      height: 10,
-      borderRadius: '50%',
-      animation: '$pulse 1.2s ease-in-out infinite',
-      display: 'inline-block',
-    },
-
-    statCard: {
-      borderRadius: 12,
-      border: '1px solid rgba(0,0,0,0.07)',
-      boxShadow: 'none',
-      textAlign: 'center',
-      padding: theme.spacing(2),
-    },
-    statIcon: { fontSize: 32, marginBottom: 4 },
-    statValue: {
-      fontSize: 26,
-      fontWeight: 800,
-      letterSpacing: '-0.04em',
-      color: '#1f2025',
-    },
-    statLabel: { fontSize: 11, color: '#8a8f99', marginTop: 2 },
-    sectionTitle: {
-      fontSize: 15,
-      fontWeight: 700,
-      color: '#1f2025',
-      letterSpacing: '-0.01em',
-      margin: theme.spacing(3, 0, 1.5),
-    },
-    courseCard: {
-      borderRadius: 12,
-      border: '1px solid rgba(0,0,0,0.07)',
-      boxShadow: 'none',
-      cursor: 'pointer',
-      height: '100%',
-      transition: 'box-shadow 0.15s',
-      '&:hover': { boxShadow: '0 4px 14px rgba(0,0,0,0.09)' },
-    },
-    progressRow: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      marginBottom: 4,
-    },
-    emptyText: { color: '#b0b5bf', fontSize: 13 },
   }),
 );
+
+const COURSE_COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444'];
 
 const StudentDashboard = () => {
   const classes = useStyles();
@@ -304,27 +292,18 @@ const StudentDashboard = () => {
   const user = useSelector((state: IState) => state.core.user);
 
   const [enrollments, setEnrollments] = useState<any[]>([]);
-  const [assignments, setAssignments] = useState<any[]>([]);
-  const [sessions, setSessions] = useState<any[]>([]); // timetable
-  const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [calEvents, setCalEvents] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [attendanceDays, setAttendanceDays] = useState<number[]>([
+    0, 0, 0, 0, 0, 0, 0,
+  ]);
   const [loading, setLoading] = useState(true);
-
   const [calMonth, setCalMonth] = useState(new Date());
-  const [selectedDay, setSelectedDay] = useState(new Date());
-
-  // Refresh in-progress status every minute
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const interval = setInterval(() => setTick((t) => t + 1), 60000);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     let done = 0;
     const finish = () => {
       done += 1;
-      if (done === 2) setLoading(false);
+      if (done >= 1) setLoading(false);
     };
 
     get(
@@ -334,33 +313,8 @@ const StudentDashboard = () => {
       finish,
     );
 
-    search(
-      remoteRoutes.studentSchedule,
-      {
-        from: format(startOfMonth(calMonth), 'yyyy-MM-dd'),
-        to: format(endOfMonth(calMonth), 'yyyy-MM-dd'),
-      },
-      (data) => setAssignments(data.assignments || []),
-      undefined,
-      finish,
-    );
-
-    // Announcements + calendar events — gracefully ignore errors
-    get(
-      remoteRoutes.announcements,
-      (d) => setAnnouncements(Array.isArray(d) ? d : []),
-      undefined,
-      undefined,
-    );
-    get(
-      remoteRoutes.calendarEvents,
-      (d) => setCalEvents(Array.isArray(d) ? d : []),
-      undefined,
-      undefined,
-    );
-
-    // Timetable — gracefully ignore if endpoint not yet live
-    if (user.contactId) {
+    // Timetable sessions
+    if (user?.contactId) {
       get(
         `${remoteRoutes.timetable}?studentId=${user.contactId}`,
         (data: any) =>
@@ -369,7 +323,22 @@ const StudentDashboard = () => {
         undefined,
       );
     }
-  }, [user.contactId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Attendance for last 7 days — uses student's own records
+    get(
+      `${remoteRoutes.attendanceSessions}?studentView=true&days=7`,
+      (data: any) => {
+        if (Array.isArray(data) && data.length) {
+          const counts: number[] = data
+            .slice(0, 7)
+            .map((d: any) => d.count || 0);
+          if (counts.length) setAttendanceDays(counts);
+        }
+      },
+      undefined,
+      undefined,
+    );
+  }, [user?.contactId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading)
     return (
@@ -378,83 +347,147 @@ const StudentDashboard = () => {
       </Layout>
     );
 
-  const completedCount = enrollments.filter(
-    (e) => e.status === 'completed',
-  ).length;
+  // Today's sessions
+  const todayDow = new Date().getDay(); // 0=Sun
+  const todaySessions = sessions.filter((s: any) => {
+    const dow = typeof s.dayOfWeek === 'number' ? s.dayOfWeek : -1;
+    return dow === todayDow;
+  });
 
-  // ── Next-class / in-progress detection ──────────────────────
-  const now = new Date();
-  const todayDow = now.getDay();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-
-  const inProgressSession = sessions.find(isSessionInProgress);
-
-  const nextSession = sessions
-    .filter((s) => {
-      if (s.dayOfWeek > todayDow) return true;
-      if (s.dayOfWeek === todayDow && toMinutes(s.startTime) > nowMin)
-        return true;
-      return false;
-    })
-    .sort((a, b) => {
-      if (a.dayOfWeek !== b.dayOfWeek) return a.dayOfWeek - b.dayOfWeek;
-      return toMinutes(a.startTime) - toMinutes(b.startTime);
-    })[0];
-
-  const bannerSession = inProgressSession || nextSession;
-  const isLive = !!inProgressSession;
-  const DAY_NAMES = [
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-  ];
-
-  // ── Calendar dots: sessions (indigo) + assignments (coral) ──
-  const assignDueDates = new Set(
-    assignments.map((a) => format(parseISO(a.date), 'yyyy-MM-dd')),
-  );
-
-  // sessions appear on every matching dayOfWeek in the current month
-  const sessionDates = new Set<string>();
+  // Calendar grid
   const monthStart = startOfMonth(calMonth);
   const monthEnd = endOfMonth(calMonth);
-  let d = monthStart;
-  while (d <= monthEnd) {
-    if (sessions.some((s) => s.dayOfWeek === d.getDay())) {
-      sessionDates.add(format(d, 'yyyy-MM-dd'));
-    }
-    d = addDays(d, 1);
-  }
-
-  // ── Selected-day events ──────────────────────────────────────
-  const selectedDayStr = format(selectedDay, 'yyyy-MM-dd');
-  const selectedDayAssignments = assignments.filter(
-    (a) => format(parseISO(a.date), 'yyyy-MM-dd') === selectedDayStr,
-  );
-  const selectedDayDow = selectedDay.getDay();
-  const selectedDaySessions = sessions
-    .filter((s) => s.dayOfWeek === selectedDayDow)
-    .sort((a, b) => toMinutes(a.startTime) - toMinutes(b.startTime));
-
-  // ── Calendar grid ────────────────────────────────────────────
   const calDays: Date[] = [];
-  let cur = startOfWeek(monthStart);
-  while (cur <= endOfWeek(monthEnd)) {
+  let cur = startOfWeek(monthStart, { weekStartsOn: 1 });
+  while (cur <= endOfWeek(monthEnd, { weekStartsOn: 1 })) {
     calDays.push(cur);
     cur = addDays(cur, 1);
   }
 
-  const weeklyClassCount = sessions.length; // all recurring sessions = weekly classes
+  // Last 7 day labels for chart
+  const last7 = Array.from({ length: 7 }, (_, i) =>
+    format(subDays(new Date(), 6 - i), 'dd MMM'),
+  );
+  const chartFrom = format(subDays(new Date(), 6), 'do MMM yyyy');
+  const chartTo = format(new Date(), 'do MMM yyyy');
+
+  const barData = {
+    labels: last7,
+    datasets: [
+      {
+        label: 'Attendance',
+        data: attendanceDays,
+        backgroundColor: 'rgba(254,58,106,0.15)',
+        borderColor: '#fe3a6a',
+        borderWidth: 2,
+        borderRadius: 6,
+      },
+    ],
+  };
+
+  const barOptions = {
+    responsive: true,
+    maintainAspectRatio: true,
+    legend: { display: false },
+    scales: {
+      yAxes: [
+        {
+          ticks: {
+            beginAtZero: true,
+            stepSize: 20,
+            max: 100,
+            fontColor: '#8a8f99',
+            fontSize: 11,
+          },
+          gridLines: { color: 'rgba(0,0,0,0.05)' },
+        },
+      ],
+      xAxes: [
+        {
+          ticks: { fontColor: '#8a8f99', fontSize: 11 },
+          gridLines: { display: false },
+        },
+      ],
+    },
+  };
 
   return (
     <Layout>
       <div className={classes.shell}>
-        {/* ══════════ RIGHT: Calendar panel ══════════ */}
-        <div className={classes.calPanel} style={{ order: 2 }}>
+        {/* ══ MAIN CONTENT ══════════════════════════════════════════════ */}
+        <div className={classes.main}>
+          {/* Reminders Banner */}
+          <div className={classes.reminderBanner}>
+            <div className={classes.bannerDecor} />
+            <div className={classes.bannerDecor2} />
+            <Typography className={classes.reminderTitle}>
+              Class &amp; Assessment Reminders
+            </Typography>
+            <Typography className={classes.reminderText}>
+              Stay on top of your schedule. Upcoming classes and exam dates are
+              now highlighted in your dashboard to help you plan ahead.
+            </Typography>
+            <div className={classes.reminderDots}>
+              <div className={classes.dotActive} />
+              <div className={classes.dot} />
+              <div className={classes.dot} />
+            </div>
+          </div>
+
+          {/* My Modules */}
+          <Typography className={classes.sectionTitle}>My Modules</Typography>
+          {enrollments.length === 0 ? (
+            <div className={classes.emptyModules}>No modules enrolled yet.</div>
+          ) : (
+            <div className={classes.modulesRow}>
+              {enrollments.map((en: any, i: number) => (
+                <div
+                  key={en.id || i}
+                  className={classes.moduleCard}
+                  onClick={() =>
+                    history.push(
+                      `${localRoutes.myCourses}/${en.courseId || en.id}`,
+                    )
+                  }
+                  style={{ background: i % 2 === 0 ? '#1f2025' : '#2a2d35' }}
+                >
+                  <div className={classes.moduleIconWrap}>
+                    <MenuBookIcon
+                      style={{
+                        fontSize: 20,
+                        color: COURSE_COLORS[i % COURSE_COLORS.length],
+                      }}
+                    />
+                  </div>
+                  <div className={classes.moduleName}>
+                    {en.courseName || en.name || 'Module'}
+                  </div>
+                  <div className={classes.moduleCode}>
+                    {en.courseCode || en.code || `${i + 1}.1 – ${i + 1}.4`}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Attendance chart */}
+          <Card className={classes.chartCard} elevation={0}>
+            <Typography
+              className={classes.sectionTitle}
+              style={{ marginBottom: 4 }}
+            >
+              Class Attendance in last 7 days
+            </Typography>
+            <Typography className={classes.chartDateRange}>
+              {chartFrom} – {chartTo}
+            </Typography>
+            <Bar data={barData} options={barOptions} height={90} />
+          </Card>
+        </div>
+
+        {/* ══ RIGHT SIDEBAR ═════════════════════════════════════════════ */}
+        <div className={classes.sidebar}>
+          {/* Calendar */}
           <Card className={classes.calCard} elevation={0}>
             <div className={classes.calHeader}>
               <IconButton
@@ -476,42 +509,6 @@ const StudentDashboard = () => {
               </IconButton>
             </div>
 
-            {/* Legend */}
-            <div
-              style={{
-                display: 'flex',
-                gap: 12,
-                padding: '6px 16px 0',
-                fontSize: 10,
-                color: '#8a8f99',
-              }}
-            >
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    background: '#6366f1',
-                    display: 'inline-block',
-                  }}
-                />
-                Class
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    background: '#fe3a6a',
-                    display: 'inline-block',
-                  }}
-                />
-                Assignment due
-              </span>
-            </div>
-
             <div className={classes.calGrid}>
               {DOW.map((dn) => (
                 <div key={dn} className={classes.calDayName}>
@@ -519,11 +516,7 @@ const StudentDashboard = () => {
                 </div>
               ))}
               {calDays.map((day, i) => {
-                const ds = format(day, 'yyyy-MM-dd');
-                const hasClass = sessionDates.has(ds);
-                const hasAssign = assignDueDates.has(ds);
                 const otherMonth = !isSameMonth(day, calMonth);
-                const selected = isSameDay(day, selectedDay);
                 const todayDay = isToday(day);
                 return (
                   <div
@@ -531,734 +524,61 @@ const StudentDashboard = () => {
                     className={`${classes.calDayCell} ${
                       otherMonth ? classes.calDayOtherMonth : ''
                     }`}
-                    onClick={() => setSelectedDay(day)}
                   >
                     <span
                       className={`${classes.calDayNum} ${
-                        todayDay
-                          ? classes.calDayToday
-                          : selected
-                          ? classes.calDaySelected
-                          : ''
+                        todayDay ? classes.calDayToday : ''
                       }`}
                     >
                       {format(day, 'd')}
                     </span>
-                    {!otherMonth && (hasClass || hasAssign) && (
-                      <div className={classes.dotsRow}>
-                        {hasClass && <div className={classes.dotClass} />}
-                        {hasAssign && <div className={classes.dotAssign} />}
-                      </div>
-                    )}
                   </div>
                 );
               })}
-            </div>
-
-            {/* Selected-day panel */}
-            <div className={classes.dayPanel}>
-              <div className={classes.dayPanelLabel}>
-                {format(selectedDay, 'EEE, dd MMM')}
-              </div>
-
-              {selectedDaySessions.length === 0 &&
-                selectedDayAssignments.length === 0 && (
-                  <div className={classes.noEvents}>Nothing scheduled</div>
-                )}
-
-              {selectedDaySessions.map((s: any) => {
-                const live = isSessionInProgress(s) && isToday(selectedDay);
-                return (
-                  <div key={`s-${s.id}`} className={classes.dayEventRow}>
-                    <div
-                      className={classes.dayEventDot}
-                      style={{
-                        background: live ? '#22c55e' : '#6366f1',
-                        boxShadow: live
-                          ? '0 0 0 3px rgba(34,197,94,0.25)'
-                          : undefined,
-                      }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <div className={classes.dayEventTitle}>
-                        {s.courseName}
-                        {live && (
-                          <span
-                            style={{
-                              marginLeft: 6,
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: '#22c55e',
-                              background: '#f0fdf4',
-                              border: '1px solid #bbf7d0',
-                              borderRadius: 10,
-                              padding: '1px 6px',
-                            }}
-                          >
-                            LIVE
-                          </span>
-                        )}
-                      </div>
-                      <div className={classes.dayEventSub}>
-                        {formatTime(s.startTime)} – {formatTime(s.endTime)}
-                        {s.location && ` · ${s.location}`}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {selectedDayAssignments.map((ev: any) => (
-                <div key={`a-${ev.id}`} className={classes.dayEventRow}>
-                  <div
-                    className={classes.dayEventDot}
-                    style={{ background: '#fe3a6a' }}
-                  />
-                  <div>
-                    <div className={classes.dayEventTitle}>{ev.title}</div>
-                    <div className={classes.dayEventSub}>
-                      Due · {ev.courseTitle}
-                    </div>
-                  </div>
-                </div>
-              ))}
             </div>
           </Card>
-        </div>
 
-        {/* ══════════ LEFT: Main content ══════════ */}
-        <div className={classes.content}>
-          <div className={classes.welcome}>
-            Welcome back, {user.fullName?.split(' ')[0] || 'Student'}!
-          </div>
-          <div className={classes.welcomeSub}>
-            {format(now, 'EEEE, MMMM d')} · Your learning overview
-          </div>
-
-          {/* ── Announcements ── */}
-          {announcements.length > 0 &&
-            (() => {
-              const ANN_CONFIG: Record<
-                string,
-                {
-                  bg: string;
-                  bar: string;
-                  icon: string;
-                  label: string;
-                  title: string;
-                  body: string;
-                }
-              > = {
-                info: {
-                  bg: '#eff6ff',
-                  bar: '#3b82f6',
-                  icon: '📢',
-                  label: 'Announcement',
-                  title: '#1e40af',
-                  body: '#1d4ed8',
-                },
-                warning: {
-                  bg: '#fffbeb',
-                  bar: '#f59e0b',
-                  icon: '⚠️',
-                  label: 'Important',
-                  title: '#92400e',
-                  body: '#b45309',
-                },
-                event: {
-                  bg: '#f0fdf4',
-                  bar: '#22c55e',
-                  icon: '🎉',
-                  label: 'Event',
-                  title: '#14532d',
-                  body: '#166534',
-                },
-                success: {
-                  bg: '#f5f3ff',
-                  bar: '#8b5cf6',
-                  icon: '✅',
-                  label: 'Notice',
-                  title: '#4c1d95',
-                  body: '#5b21b6',
-                },
-              };
-              return (
-                <div style={{ marginBottom: 16 }}>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: '#8a8f99',
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
-                      marginBottom: 10,
-                    }}
-                  >
-                    📣 Notices from Admin
-                  </div>
-                  {announcements.slice(0, 5).map((ann: any) => {
-                    const c = ANN_CONFIG[ann.type] || ANN_CONFIG.info;
-                    return (
-                      <div
-                        key={ann.id}
-                        style={{
-                          background: c.bg,
-                          borderRadius: 12,
-                          marginBottom: 10,
-                          display: 'flex',
-                          overflow: 'hidden',
-                          boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
-                        }}
-                      >
-                        {/* Colored left bar */}
-                        <div
-                          style={{ width: 4, background: c.bar, flexShrink: 0 }}
-                        />
-                        <div style={{ padding: '14px 16px', flex: 1 }}>
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 8,
-                              marginBottom: 6,
-                            }}
-                          >
-                            <span style={{ fontSize: 16 }}>{c.icon}</span>
-                            <span
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 700,
-                                color: c.bar,
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.05em',
-                              }}
-                            >
-                              {c.label}
-                            </span>
-                            {ann.pinned && (
-                              <span
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                  color: '#d97706',
-                                  background: '#fef3c7',
-                                  borderRadius: 5,
-                                  padding: '1px 6px',
-                                }}
-                              >
-                                📌 Pinned
-                              </span>
-                            )}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 14,
-                              fontWeight: 700,
-                              color: c.title,
-                              marginBottom: 5,
-                            }}
-                          >
-                            {ann.title}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 13,
-                              color: c.body,
-                              lineHeight: 1.6,
-                              whiteSpace: 'pre-line',
-                            }}
-                          >
-                            {ann.body}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 11,
-                              color: '#9ca3af',
-                              marginTop: 8,
-                            }}
-                          >
-                            {new Date(ann.createdAt).toLocaleDateString(
-                              'en-GB',
-                              {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric',
-                              },
-                            )}
-                            {ann.expiresAt &&
-                              ` · Expires ${new Date(
-                                ann.expiresAt,
-                              ).toLocaleDateString('en-GB', {
-                                day: 'numeric',
-                                month: 'short',
-                              })}`}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-
-          {/* ── Upcoming calendar events ── */}
-          {calEvents.length > 0 && (
-            <div
-              style={{
-                background: '#fff',
-                border: '1px solid #ede8e3',
-                borderRadius: 12,
-                padding: '14px 18px',
-                marginBottom: 16,
-                boxShadow: '0 1px 6px rgba(0,0,0,0.05)',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: '#8a8f99',
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  marginBottom: 12,
-                }}
-              >
-                📅 Upcoming Events
-              </div>
-              {calEvents.slice(0, 4).map((evt: any) => {
-                const evtDate = new Date(evt.eventDate);
-                const daysAway = Math.ceil(
-                  (evtDate.getTime() - Date.now()) / 86400000,
-                );
-                const EVT_COLORS: Record<string, string> = {
-                  general: '#6366f1',
-                  class: '#0ea5e9',
-                  holiday: '#10b981',
-                  milestone: '#f59e0b',
-                  deadline: '#fe3a6a',
-                };
-                const color = EVT_COLORS[evt.type] || '#6366f1';
-                const daysLabel =
-                  daysAway <= 0
-                    ? 'Today'
-                    : daysAway === 1
-                    ? 'Tomorrow'
-                    : `In ${daysAway}d`;
-                return (
-                  <div
-                    key={evt.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 14,
-                      padding: '9px 0',
-                      borderBottom: '1px solid #f3ede9',
-                    }}
-                  >
-                    <div
-                      style={{
-                        background: `${color}18`,
-                        borderRadius: 10,
-                        padding: '6px 10px',
-                        textAlign: 'center',
-                        flexShrink: 0,
-                        minWidth: 44,
-                        border: `1px solid ${color}30`,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 16,
-                          fontWeight: 800,
-                          color,
-                          lineHeight: 1,
-                        }}
-                      >
-                        {evtDate.getDate()}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 9,
-                          fontWeight: 700,
-                          color,
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {evtDate.toLocaleDateString('en-GB', {
-                          month: 'short',
-                        })}
-                      </div>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: 14,
-                          fontWeight: 700,
-                          color: '#1f2025',
-                        }}
-                      >
-                        {evt.title}
-                      </div>
-                      {evt.location && (
-                        <div
-                          style={{
-                            fontSize: 12,
-                            color: '#9ca3af',
-                            marginTop: 2,
-                          }}
-                        >
-                          📍 {evt.location}
-                        </div>
-                      )}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: daysAway <= 1 ? '#fe3a6a' : color,
-                        background: daysAway <= 1 ? '#fff0f3' : `${color}12`,
-                        borderRadius: 8,
-                        padding: '3px 9px',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {daysLabel}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* ── Next class / In-progress banner ── */}
-          {bannerSession && (
-            <div
-              className={classes.nextClassBanner}
-              style={{
-                background: isLive
-                  ? 'linear-gradient(135deg, rgba(34,197,94,0.10) 0%, rgba(16,185,129,0.06) 100%)'
-                  : 'linear-gradient(135deg, rgba(254,58,106,0.08) 0%, rgba(254,140,69,0.06) 100%)',
-                border: isLive
-                  ? '1px solid rgba(34,197,94,0.25)'
-                  : '1px solid rgba(254,58,106,0.18)',
-              }}
-            >
-              {/* Pulsing ring */}
-              <div
-                className={classes.pulseRing}
-                style={{
-                  background: isLive
-                    ? 'rgba(34,197,94,0.12)'
-                    : 'rgba(254,58,106,0.10)',
-                }}
-              >
-                <div
-                  className={classes.ripple}
-                  style={{
-                    background: isLive
-                      ? 'rgba(34,197,94,0.25)'
-                      : 'rgba(254,58,106,0.2)',
-                  }}
-                />
-                <EventNoteIcon
-                  style={{
-                    fontSize: 22,
-                    color: isLive ? '#22c55e' : '#fe3a6a',
-                    position: 'relative',
-                  }}
-                />
-              </div>
-
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    color: isLive ? '#22c55e' : '#fe3a6a',
-                    marginBottom: 3,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                >
-                  {isLive ? (
-                    <>
-                      <span
-                        className={classes.pulseDot}
-                        style={{ backgroundColor: '#22c55e' }}
-                      />
-                      Class in Progress
-                    </>
-                  ) : (
-                    'Next Class'
-                  )}
-                </div>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 800,
-                    color: '#1f2025',
-                    fontFamily: '"Plus Jakarta Sans", sans-serif',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {bannerSession.courseName}
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: '#5a5e6b',
-                    marginTop: 2,
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 10,
-                  }}
-                >
-                  <span
-                    style={{ display: 'flex', alignItems: 'center', gap: 3 }}
-                  >
-                    <AccessTimeIcon style={{ fontSize: 12 }} />
-                    {DAY_NAMES[bannerSession.dayOfWeek]} ·{' '}
-                    {formatTime(bannerSession.startTime)} –{' '}
-                    {formatTime(bannerSession.endTime)}
-                  </span>
-                  {bannerSession.location && (
-                    <span
-                      style={{ display: 'flex', alignItems: 'center', gap: 3 }}
-                    >
-                      <LocationOnIcon style={{ fontSize: 12 }} />
-                      {bannerSession.location}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {isLive && (
-                <Chip
-                  label="LIVE"
-                  size="small"
-                  style={{
-                    fontWeight: 800,
-                    fontSize: 10,
-                    letterSpacing: '0.08em',
-                    backgroundColor: '#22c55e',
-                    color: '#fff',
-                    borderRadius: 6,
-                    height: 22,
-                    flexShrink: 0,
-                  }}
-                />
-              )}
-            </div>
-          )}
-
-          {/* Stats */}
-          <Grid container spacing={2}>
-            {[
-              {
-                label: 'Enrolled',
-                value: enrollments.length,
-                icon: SchoolIcon,
-                color: '#6366f1',
-              },
-              {
-                label: 'Due This Month',
-                value: assignments.length,
-                icon: AssignmentIcon,
-                color: '#fe3a6a',
-              },
-              {
-                label: 'Completed',
-                value: completedCount,
-                icon: CheckCircleIcon,
-                color: '#10b981',
-              },
-              {
-                label: 'Classes / Week',
-                value: weeklyClassCount,
-                icon: EventNoteIcon,
-                color: '#f59e0b',
-              },
-            ].map((s) => {
-              const Icon = s.icon;
-              return (
-                <Grid item xs={6} sm={3} key={s.label}>
-                  <Card className={classes.statCard} elevation={0}>
-                    <Icon
-                      className={classes.statIcon}
-                      style={{ color: s.color }}
-                    />
-                    <div className={classes.statValue}>{s.value}</div>
-                    <div className={classes.statLabel}>{s.label}</div>
-                  </Card>
-                </Grid>
-              );
-            })}
-          </Grid>
-
-          {/* My Courses */}
-          <div className={classes.sectionTitle}>My Courses</div>
-          {enrollments.length === 0 ? (
-            <Typography className={classes.emptyText}>
-              No courses yet.{' '}
-              <span
-                style={{
-                  color: '#fe3a6a',
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                }}
-                onClick={() => history.push(localRoutes.catalog)}
-              >
-                Browse the catalog
-              </span>
+          {/* Today's Class */}
+          <Card className={classes.todayCard} elevation={0}>
+            <Typography className={classes.todayTitle}>
+              Today's Class
             </Typography>
-          ) : (
-            <Grid container spacing={2}>
-              {enrollments.slice(0, 6).map((enrollment: any, idx: number) => {
-                const course = enrollment.group || enrollment.course || {};
-                const progress = enrollment.progress || 0;
-                const accent = COURSE_COLORS[idx % COURSE_COLORS.length];
-                return (
-                  <Grid item xs={12} sm={6} key={enrollment.id}>
-                    <Card
-                      className={classes.courseCard}
-                      elevation={0}
-                      onClick={() => {
-                        const id = enrollment.courseId || course.id;
-                        if (id) history.push(`/my-courses/${id}`);
-                      }}
-                    >
-                      <div
+
+            {todaySessions.length === 0 ? (
+              <div className={classes.noClass}>
+                You have no upcoming Lectures
+              </div>
+            ) : (
+              todaySessions.map((s: any, i: number) => (
+                <div key={i} className={classes.classItem}>
+                  <div className={classes.classAvatar}>
+                    <LiveTvIcon style={{ fontSize: 16 }} />
+                  </div>
+                  <div>
+                    <div className={classes.className}>
+                      {s.courseName || s.subject || 'Class'}
+                    </div>
+                    <div className={classes.classTime}>
+                      {s.startTime} – {s.endTime}
+                    </div>
+                    {s.isLive && (
+                      <Chip
+                        label="Live"
+                        size="small"
                         style={{
-                          height: 4,
-                          background: accent,
-                          borderRadius: '12px 12px 0 0',
+                          backgroundColor: '#fe3a6a',
+                          color: '#fff',
+                          fontSize: 10,
+                          height: 18,
+                          marginTop: 4,
                         }}
                       />
-                      <CardContent style={{ paddingBottom: 16 }}>
-                        <Box
-                          display="flex"
-                          justifyContent="space-between"
-                          alignItems="flex-start"
-                          mb={1}
-                        >
-                          <Typography
-                            variant="subtitle2"
-                            style={{ fontWeight: 700, fontSize: 13 }}
-                          >
-                            {course.name || course.title || 'Course'}
-                          </Typography>
-                          <Chip
-                            label={enrollment.status || 'Active'}
-                            size="small"
-                            style={{
-                              fontSize: 10,
-                              height: 20,
-                              fontWeight: 700,
-                              background:
-                                enrollment.status === 'completed'
-                                  ? 'rgba(16,185,129,0.1)'
-                                  : 'rgba(99,102,241,0.1)',
-                              color:
-                                enrollment.status === 'completed'
-                                  ? '#10b981'
-                                  : '#6366f1',
-                            }}
-                          />
-                        </Box>
-                        <div className={classes.progressRow}>
-                          <Typography
-                            variant="caption"
-                            style={{ color: '#8a8f99' }}
-                          >
-                            Progress
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            style={{ fontWeight: 700, color: accent }}
-                          >
-                            {progress}%
-                          </Typography>
-                        </div>
-                        <LinearProgress
-                          variant="determinate"
-                          value={progress}
-                          style={{
-                            height: 5,
-                            borderRadius: 4,
-                            background: 'rgba(0,0,0,0.06)',
-                          }}
-                        />
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                );
-              })}
-            </Grid>
-          )}
-
-          {/* Upcoming assignments */}
-          {assignments.length > 0 && (
-            <>
-              <div className={classes.sectionTitle}>Upcoming Assignments</div>
-              <Grid container spacing={2}>
-                {assignments.slice(0, 4).map((a: any) => (
-                  <Grid item xs={12} sm={6} key={a.id}>
-                    <Card
-                      elevation={0}
-                      style={{
-                        borderRadius: 12,
-                        border: '1px solid rgba(0,0,0,0.07)',
-                        padding: '12px 16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 12,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 38,
-                          height: 38,
-                          borderRadius: 10,
-                          background: 'rgba(254,58,106,0.1)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <AssignmentIcon
-                          style={{ fontSize: 18, color: '#fe3a6a' }}
-                        />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: '#1f2025',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {a.title}
-                        </div>
-                        <div style={{ fontSize: 11, color: '#8a8f99' }}>
-                          {a.courseTitle} · Due{' '}
-                          {format(parseISO(a.date), 'dd MMM')}
-                        </div>
-                      </div>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            </>
-          )}
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </Card>
         </div>
       </div>
     </Layout>

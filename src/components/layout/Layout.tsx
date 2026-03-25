@@ -5,12 +5,16 @@ import Drawer from '@material-ui/core/Drawer';
 import Hidden from '@material-ui/core/Hidden';
 import IconButton from '@material-ui/core/IconButton';
 import MenuIcon from '@material-ui/icons/Menu';
+import NotificationsNoneIcon from '@material-ui/icons/NotificationsNone';
 import Toolbar from '@material-ui/core/Toolbar';
 import Paper from '@material-ui/core/Paper';
 import { Typography } from '@material-ui/core';
 import { BarView } from '../Profile';
 import { useStyles } from './styles';
 import NavMenu from './NavMenu';
+import { useSelector } from 'react-redux';
+import { IState } from '../../data/types';
+import { isStudent } from '../../data/appRoles';
 
 interface IProps {
   title?: string;
@@ -21,6 +25,8 @@ interface IProps {
 function Layout(props: IProps) {
   const classes = useStyles();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const user = useSelector((state: IState) => state.core.user);
+  const student = isStudent(user);
 
   function handleDrawerToggle() {
     setMobileOpen(!mobileOpen);
@@ -39,35 +45,59 @@ function Layout(props: IProps) {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap className={classes.title}>
-            {props.title}
-          </Typography>
+
+          {student ? (
+            <div style={{ flexGrow: 1 }}>
+              <Typography
+                style={{
+                  fontWeight: 700,
+                  fontSize: 15,
+                  color: '#1f2025',
+                  lineHeight: 1.2,
+                }}
+              >
+                {user?.fullName}
+              </Typography>
+              <Typography
+                style={{ fontSize: 11, color: '#8a8f99', lineHeight: 1 }}
+              >
+                Student Portal
+              </Typography>
+            </div>
+          ) : (
+            <Typography variant="h6" noWrap className={classes.title}>
+              {props.title}
+            </Typography>
+          )}
+
+          {student && (
+            <IconButton
+              size="small"
+              style={{ color: '#8a8f99', marginRight: 4 }}
+            >
+              <NotificationsNoneIcon style={{ fontSize: 22 }} />
+            </IconButton>
+          )}
+
           <BarView />
         </Toolbar>
       </AppBar>
       <nav className={classes.drawer} aria-label="mailbox folders">
-        {/* The implementation can be swapped with js to avoid SEO duplication of links. */}
         <Hidden mdUp implementation="css">
           <Drawer
             variant="temporary"
             anchor={'left'}
             open={mobileOpen}
             onClose={handleDrawerToggle}
-            classes={{
-              paper: classes.drawerPaper,
-            }}
-            ModalProps={{
-              keepMounted: true, // Better open performance on mobile.
-            }}
+            classes={{ paper: classes.drawerPaper }}
+            ModalProps={{ keepMounted: true }}
           >
-            <NavMenu />
+            <NavMenu onClose={handleDrawerToggle} />
           </Drawer>
         </Hidden>
         <Hidden smDown implementation="css">
           <Drawer
-            classes={{
-              paper: classes.drawerPaper,
-            }}
+            classes={{ paper: classes.drawerPaper }}
             variant="permanent"
             open={false}
           >

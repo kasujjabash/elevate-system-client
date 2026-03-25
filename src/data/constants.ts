@@ -117,6 +117,11 @@ export const localRoutes = {
   myAssignments: '/my-assignments',
   myProgress: '/my-progress',
 
+  // Student portal — new screens
+  myAssessments: '/my-assessments',
+  myRequests: '/my-requests',
+  workshops: '/workshops',
+
   // Attendance
   attendance: '/admin/attendance',
   attendanceSession: '/admin/attendance/:sessionId',

@@ -1,5 +1,4 @@
 import React, { Fragment } from 'react';
-import Divider from '@material-ui/core/Divider';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
@@ -11,28 +10,30 @@ import BubbleChartIcon from '@material-ui/icons/BubbleChart';
 import AssessmentIcon from '@material-ui/icons/Assessment';
 import GradeIcon from '@material-ui/icons/Grade';
 import PlaylistAddCheckIcon from '@material-ui/icons/PlaylistAddCheck';
-import LibraryBooksIcon from '@material-ui/icons/LibraryBooks';
-import EventIcon from '@material-ui/icons/Event';
-import SchoolIcon from '@material-ui/icons/School';
 import HelpOutlineIcon from '@material-ui/icons/HelpOutline';
-import AssignmentIcon from '@material-ui/icons/Assignment';
-import TrendingUpIcon from '@material-ui/icons/TrendingUp';
-import PersonIcon from '@material-ui/icons/Person';
 import NotificationsActiveIcon from '@material-ui/icons/NotificationsActive';
 import HowToRegIcon from '@material-ui/icons/HowToReg';
-import { useHistory, useLocation } from 'react-router-dom';
-import { createStyles, makeStyles, Theme, withStyles } from '@material-ui/core';
-import Grid from '@material-ui/core/Grid';
-import grey from '@material-ui/core/colors/grey';
+import HomeIcon from '@material-ui/icons/Home';
+import MenuBookIcon from '@material-ui/icons/MenuBook';
+import LiveTvIcon from '@material-ui/icons/LiveTv';
+import DateRangeIcon from '@material-ui/icons/DateRange';
+import ForumIcon from '@material-ui/icons/Forum';
+import AssignmentTurnedInIcon from '@material-ui/icons/AssignmentTurnedIn';
+import PlayCircleOutlineIcon from '@material-ui/icons/PlayCircleOutline';
+import ExitToAppIcon from '@material-ui/icons/ExitToApp';
+import Divider from '@material-ui/core/Divider';
 import Collapse from '@material-ui/core/Collapse';
 import ExpandLess from '@material-ui/icons/ExpandLess';
 import ExpandMore from '@material-ui/icons/ExpandMore';
-import { useSelector } from 'react-redux';
+import { useHistory, useLocation } from 'react-router-dom';
+import { createStyles, makeStyles, Theme, withStyles } from '@material-ui/core';
+import { useSelector, useDispatch } from 'react-redux';
 import { hasAnyRole, isStudent } from '../../data/appRoles';
-import { navBackgroundColor } from './styles';
 import { appPermissions, localRoutes } from '../../data/constants';
 import { IState } from '../../data/types';
 import { hasValue } from '../inputs/inputHelpers';
+import { handleLogout } from '../../data/coreActions';
+import elevateLogo from '../../assets/images/elevate-logo.png';
 
 interface IAppRoute {
   requiredRoles?: string[];
@@ -43,54 +44,30 @@ interface IAppRoute {
 }
 
 const studentRoutes: IAppRoute[] = [
+  { name: 'Home', route: localRoutes.dashboard, icon: HomeIcon },
+  { name: 'My Modules', route: localRoutes.myCourses, icon: MenuBookIcon },
+  { name: 'Live Classes', route: localRoutes.myClasses, icon: LiveTvIcon },
+  { name: 'My Timetable', route: localRoutes.calendar, icon: DateRangeIcon },
   {
-    name: 'Dashboard',
-    route: localRoutes.dashboard,
-    icon: AppsIcon,
+    name: 'Assessments',
+    route: localRoutes.myAssessments,
+    icon: AssessmentIcon,
+  },
+  { name: 'Chats / Inquiries', route: localRoutes.chat, icon: ForumIcon },
+  {
+    name: 'Requests & Applications',
+    route: localRoutes.myRequests,
+    icon: AssignmentTurnedInIcon,
   },
   {
-    name: 'Course Catalog',
-    route: localRoutes.catalog,
-    icon: LibraryBooksIcon,
-  },
-  {
-    name: 'My Courses',
-    route: localRoutes.myCourses,
-    icon: SchoolIcon,
-  },
-  {
-    name: 'My Classes',
-    route: localRoutes.myClasses,
-    icon: EventIcon,
-  },
-  {
-    name: 'Assignments',
-    route: localRoutes.myAssignments,
-    icon: AssignmentIcon,
-  },
-  {
-    name: 'My Progress',
-    route: localRoutes.myProgress,
-    icon: TrendingUpIcon,
-  },
-  {
-    name: 'My Profile',
-    route: localRoutes.myProfile,
-    icon: PersonIcon,
-  },
-  {
-    name: 'Help',
-    route: localRoutes.help,
-    icon: HelpOutlineIcon,
+    name: 'Workshops & Podcasts',
+    route: localRoutes.workshops,
+    icon: PlayCircleOutlineIcon,
   },
 ];
 
 const staffRoutes: IAppRoute[] = [
-  {
-    name: 'Dashboard',
-    route: localRoutes.dashboard,
-    icon: AppsIcon,
-  },
+  { name: 'Dashboard', route: localRoutes.dashboard, icon: AppsIcon },
   {
     requiredRoles: [
       appPermissions.roleStudentView,
@@ -158,94 +135,73 @@ const staffRoutes: IAppRoute[] = [
       { name: 'Manage Help', route: localRoutes.manageHelp },
     ],
   },
-  {
-    name: 'Help',
-    route: localRoutes.help,
-    icon: HelpOutlineIcon,
-  },
+  { name: 'Help', route: localRoutes.help, icon: HelpOutlineIcon },
 ];
-const menBackgroundColor = 'rgba(255,255,255,0.08)';
-const selectedColor = 'rgba(254,58,106,0.18)';
 
-const useStyles = makeStyles((theme: Theme) =>
+const selectedBg = 'rgba(254,58,106,0.07)';
+
+const useStyles = makeStyles((_theme: Theme) =>
   createStyles({
+    root: {
+      backgroundColor: '#ffffff',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      borderRight: '1px solid rgba(0,0,0,0.06)',
+    },
     logoHolder: {
-      height: 100,
-      padding: theme.spacing(0, 2),
-      borderBottom: '1px solid rgba(255,255,255,0.08)',
+      height: 80,
+      padding: '0 20px',
+      borderBottom: '1px solid rgba(0,0,0,0.06)',
+      display: 'flex',
+      alignItems: 'center',
     },
-    logoText: {
-      fontFamily: '"Plus Jakarta Sans", sans-serif',
-      fontWeight: 800,
-      fontSize: '17px',
-      color: 'white',
-      letterSpacing: '-0.4px',
-      lineHeight: 1.2,
-      margin: 0,
+    logoImg: { height: 34, objectFit: 'contain' as const },
+    list: { flex: 1, paddingTop: 8, overflowY: 'auto' as const },
+    bottomList: { paddingBottom: 8 },
+    item: {
+      borderRadius: 6,
+      margin: '1px 10px',
+      width: 'calc(100% - 20px)',
+      padding: '9px 10px',
+      '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
     },
-    logoAccent: {
-      display: 'block',
-      fontSize: '11px',
-      fontWeight: 400,
-      color: 'rgba(255,255,255,0.5)',
-      letterSpacing: '0.5px',
-      textTransform: 'uppercase',
-      marginTop: 2,
+    selectedItem: {
+      backgroundColor: `${selectedBg} !important`,
+      borderLeft: '3px solid #fe3a6a',
+      borderRadius: '0 6px 6px 0',
+      marginLeft: 0,
+      paddingLeft: 17,
+      width: 'calc(100% - 10px)',
     },
-    logoGradientBar: {
-      width: 32,
-      height: 3,
-      borderRadius: 4,
-      background: 'linear-gradient(90deg, #fe3a6a 0%, #fe8c45 100%)',
-      marginBottom: 8,
-    },
-    whiteText: {
-      color: 'rgba(255,255,255,0.85)',
+    icon: { minWidth: 34, color: '#8a8f99' },
+    iconSelected: { minWidth: 34, color: '#fe3a6a' },
+    text: {
+      color: '#5a5e6b',
       '& span': {
         fontFamily: '"Plus Jakarta Sans", sans-serif',
         fontWeight: 500,
         fontSize: '13px',
       },
     },
-    selectedText: {
-      color: '#ffffff',
-      '& span': {
-        fontWeight: 600,
-      },
-    },
-    menuItem: {
-      borderRadius: 8,
-      margin: '2px 8px',
-      width: 'calc(100% - 16px)',
-      '&:hover': {
-        backgroundColor: menBackgroundColor,
-      },
-    },
-    selectedItem: {
-      backgroundColor: `${selectedColor} !important`,
-      borderRadius: 8,
-    },
-    nested: {
-      paddingLeft: theme.spacing(4),
-    },
-    iconWrapper: {
-      minWidth: 36,
-      color: 'rgba(255,255,255,0.6)',
-    },
-    selectedIcon: {
+    textSelected: {
       color: '#fe3a6a',
+      '& span': { fontWeight: 600 },
+    },
+    nestedItem: {
+      borderRadius: 6,
+      margin: '1px 10px 1px 22px',
+      width: 'calc(100% - 32px)',
+      padding: '8px 10px',
+      '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
     },
   }),
 );
 
 const StyledListItem = withStyles({
   root: {
-    '&$selected': {
-      backgroundColor: selectedColor,
-    },
-    '&$selected:hover': {
-      backgroundColor: selectedColor,
-    },
+    '&$selected': { backgroundColor: selectedBg },
+    '&$selected:hover': { backgroundColor: selectedBg },
   },
   selected: {},
 })(ListItem);
@@ -254,58 +210,119 @@ const NavMenu = (props: any) => {
   const classes = useStyles();
   const history = useHistory();
   const location = useLocation();
+  const dispatch = useDispatch();
   const [open, setOpen] = React.useState<any>({});
   const user = useSelector((state: IState) => state.core.user);
-  const handleMenuClick = (name: string) => () => {
-    const menuData = { ...open, [name]: !open[name] };
-    setOpen(menuData);
-  };
+  const student = isStudent(user);
+
+  const handleMenuClick = (name: string) => () =>
+    setOpen({ ...open, [name]: !open[name] });
 
   const onClick = (path: string) => () => {
-    const { onClose } = props;
     history.push(path);
-    if (onClose) onClose();
+    if (props.onClose) props.onClose();
   };
-  const pathMatches = (path: string, str: string) => path.indexOf(str) > -1;
 
-  const isSelected = (pathStr: string): boolean => {
-    const { pathname } = location;
-    return pathMatches(pathname, pathStr);
-  };
+  const doLogout = () => dispatch(handleLogout());
+
+  const isSelected = (pathStr: string) =>
+    location.pathname.indexOf(pathStr) > -1;
 
   const cleanRoutes = (r: IAppRoute[]) =>
     r.filter((it) => {
       let { items } = it;
-      if (items && hasValue(items)) {
-        items = cleanRoutes(items);
-      }
+      if (items && hasValue(items)) items = cleanRoutes(items);
       return it.requiredRoles ? hasAnyRole(user, it.requiredRoles) : true;
     });
 
-  const activeRoutes = isStudent(user) ? studentRoutes : staffRoutes;
-  const finalRoutes = cleanRoutes(activeRoutes);
+  const Logo = (
+    <div className={classes.logoHolder}>
+      <img src={elevateLogo} alt="era92 elevate" className={classes.logoImg} />
+    </div>
+  );
+
+  // ── Student sidebar ──────────────────────────────────────────────────────
+  if (student) {
+    return (
+      <div className={classes.root}>
+        {Logo}
+        <List className={classes.list}>
+          {studentRoutes.map((it) => {
+            const Icon = it.icon;
+            const selected = isSelected(it.route!);
+            return (
+              <StyledListItem
+                button
+                key={it.name}
+                onClick={onClick(it.route!)}
+                selected={selected}
+                className={classes.item}
+                classes={{ selected: classes.selectedItem }}
+              >
+                <ListItemIcon
+                  className={selected ? classes.iconSelected : classes.icon}
+                >
+                  <Icon style={{ fontSize: 19 }} />
+                </ListItemIcon>
+                <ListItemText
+                  primary={it.name}
+                  className={selected ? classes.textSelected : classes.text}
+                />
+              </StyledListItem>
+            );
+          })}
+        </List>
+
+        <Divider style={{ backgroundColor: 'rgba(0,0,0,0.06)' }} />
+
+        <List className={classes.bottomList}>
+          {[
+            {
+              name: 'Settings',
+              route: localRoutes.settings,
+              Icon: SettingsIcon,
+            },
+          ].map(({ name, route, Icon }) => {
+            const selected = isSelected(route);
+            return (
+              <StyledListItem
+                button
+                key={name}
+                onClick={onClick(route)}
+                selected={selected}
+                className={classes.item}
+                classes={{ selected: classes.selectedItem }}
+              >
+                <ListItemIcon
+                  className={selected ? classes.iconSelected : classes.icon}
+                >
+                  <Icon style={{ fontSize: 19 }} />
+                </ListItemIcon>
+                <ListItemText
+                  primary={name}
+                  className={selected ? classes.textSelected : classes.text}
+                />
+              </StyledListItem>
+            );
+          })}
+          <StyledListItem button onClick={doLogout} className={classes.item}>
+            <ListItemIcon className={classes.icon}>
+              <ExitToAppIcon style={{ fontSize: 19 }} />
+            </ListItemIcon>
+            <ListItemText primary="Logout" className={classes.text} />
+          </StyledListItem>
+        </List>
+      </div>
+    );
+  }
+
+  // ── Staff sidebar ──────────────────────────────────────────────────────────
+  const finalRoutes = cleanRoutes(staffRoutes);
 
   return (
-    <div style={{ backgroundColor: '#1f2025', height: '100%' }}>
-      {/* Logo */}
-      <Grid
-        className={classes.logoHolder}
-        container
-        spacing={0}
-        alignContent="center"
-        alignItems="center"
-        style={{ padding: '0 20px' }}
-      >
-        <div>
-          <div className={classes.logoGradientBar} />
-          <p className={classes.logoText}>
-            Elevate Academy
-            <span className={classes.logoAccent}>Digital Skills Platform</span>
-          </p>
-        </div>
-      </Grid>
-
-      <List style={{ paddingTop: 8 }}>
+    <div className={classes.root}>
+      {Logo}
+      <List className={classes.list}>
         {finalRoutes.map((it) => {
           const Icon = it.icon;
           const selected = isSelected(it.route || it.name.toLowerCase());
@@ -315,29 +332,23 @@ const NavMenu = (props: any) => {
                 <StyledListItem
                   button
                   onClick={handleMenuClick(it.name)}
-                  className={classes.menuItem}
+                  className={classes.item}
+                  selected={selected}
+                  classes={{ selected: classes.selectedItem }}
                 >
                   <ListItemIcon
-                    className={
-                      selected ? classes.selectedIcon : classes.iconWrapper
-                    }
+                    className={selected ? classes.iconSelected : classes.icon}
                   >
-                    <Icon style={{ fontSize: 20 }} />
+                    <Icon style={{ fontSize: 19 }} />
                   </ListItemIcon>
                   <ListItemText
                     primary={it.name}
-                    className={
-                      selected ? classes.selectedText : classes.whiteText
-                    }
+                    className={selected ? classes.textSelected : classes.text}
                   />
                   {open[it.name] ? (
-                    <ExpandLess
-                      style={{ color: 'rgba(255,255,255,0.5)', fontSize: 18 }}
-                    />
+                    <ExpandLess style={{ color: '#8a8f99', fontSize: 18 }} />
                   ) : (
-                    <ExpandMore
-                      style={{ color: 'rgba(255,255,255,0.5)', fontSize: 18 }}
-                    />
+                    <ExpandMore style={{ color: '#8a8f99', fontSize: 18 }} />
                   )}
                 </StyledListItem>
                 <Collapse
@@ -352,20 +363,15 @@ const NavMenu = (props: any) => {
                         onClick={onClick(ch.route!)}
                         selected={isSelected(ch.route!)}
                         key={ch.name}
+                        className={classes.nestedItem}
                         classes={{ selected: classes.selectedItem }}
-                        style={{
-                          borderRadius: 8,
-                          margin: '2px 8px',
-                          width: 'calc(100% - 16px)',
-                        }}
                       >
                         <ListItemText
-                          inset
                           primary={ch.name}
                           className={
                             isSelected(ch.route!)
-                              ? classes.selectedText
-                              : classes.whiteText
+                              ? classes.textSelected
+                              : classes.text
                           }
                         />
                       </StyledListItem>
@@ -381,23 +387,32 @@ const NavMenu = (props: any) => {
               onClick={onClick(it.route!)}
               selected={selected}
               key={it.name}
-              className={classes.menuItem}
+              className={classes.item}
               classes={{ selected: classes.selectedItem }}
             >
               <ListItemIcon
-                className={
-                  selected ? classes.selectedIcon : classes.iconWrapper
-                }
+                className={selected ? classes.iconSelected : classes.icon}
               >
-                <Icon style={{ fontSize: 20 }} />
+                <Icon style={{ fontSize: 19 }} />
               </ListItemIcon>
               <ListItemText
                 primary={it.name}
-                className={selected ? classes.selectedText : classes.whiteText}
+                className={selected ? classes.textSelected : classes.text}
               />
             </StyledListItem>
           );
         })}
+      </List>
+
+      <Divider style={{ backgroundColor: 'rgba(0,0,0,0.06)' }} />
+
+      <List className={classes.bottomList}>
+        <StyledListItem button onClick={doLogout} className={classes.item}>
+          <ListItemIcon className={classes.icon}>
+            <ExitToAppIcon style={{ fontSize: 19 }} />
+          </ListItemIcon>
+          <ListItemText primary="Logout" className={classes.text} />
+        </StyledListItem>
       </List>
     </div>
   );
