@@ -5,8 +5,11 @@ import {
   Box,
   Button,
   CircularProgress,
+  Chip,
   Grid,
   LinearProgress,
+  Tab,
+  Tabs,
   Typography,
 } from '@material-ui/core';
 import { makeStyles, Theme } from '@material-ui/core/styles';
@@ -17,157 +20,258 @@ import PhoneIcon from '@material-ui/icons/Phone';
 import LocationOnIcon from '@material-ui/icons/LocationOn';
 import SchoolIcon from '@material-ui/icons/School';
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
-import WatchLaterIcon from '@material-ui/icons/WatchLater';
+import BlockIcon from '@material-ui/icons/Block';
+import CakeIcon from '@material-ui/icons/Cake';
+import WcIcon from '@material-ui/icons/Wc';
+import VpnKeyIcon from '@material-ui/icons/VpnKey';
+import AccessTimeIcon from '@material-ui/icons/AccessTime';
+import EventIcon from '@material-ui/icons/Event';
+import HowToRegIcon from '@material-ui/icons/HowToReg';
+import TrendingUpIcon from '@material-ui/icons/TrendingUp';
 import Layout from '../../../components/layout/Layout';
 import { get } from '../../../utils/ajax';
 import { localRoutes, remoteRoutes } from '../../../data/constants';
 import { getRouteParam } from '../../../utils/routHelpers';
 
-const CORAL = '#fe3a6a';
+const CORAL = '#E72C6C';
 const ORANGE = '#fe8c45';
 const DARK = '#1f2025';
 
 const useStyles = makeStyles((theme: Theme) => ({
-  root: { padding: theme.spacing(3), background: '#f8f7f5', minHeight: '100%' },
+  root: {
+    padding: 24,
+    background: '#f7f8fa',
+    minHeight: '100%',
+    [theme.breakpoints.down('xs')]: { padding: 12 },
+  },
 
-  // ── Hero banner ────────────────────────────────────────────────
-  heroBanner: {
-    background: `linear-gradient(135deg, ${DARK} 0%, #2d2f36 100%)`,
+  // ── Hero ─────────────────────────────────────────────────────────────────
+  hero: {
+    background: `linear-gradient(120deg, ${CORAL} 0%, ${ORANGE} 100%)`,
     borderRadius: 16,
     padding: '28px 32px',
+    marginBottom: 24,
+    [theme.breakpoints.down('xs')]: { padding: '20px 16px' },
+  },
+  heroTop: {
     display: 'flex',
-    alignItems: 'center',
-    gap: 24,
-    marginBottom: theme.spacing(3),
+    alignItems: 'flex-start',
+    gap: 20,
     flexWrap: 'wrap' as any,
   },
   avatar: {
-    width: 72,
-    height: 72,
-    background: `linear-gradient(135deg, ${CORAL}, ${ORANGE})`,
-    fontSize: 26,
+    width: 80,
+    height: 80,
+    background: 'rgba(255,255,255,0.25)',
+    fontSize: 28,
     fontWeight: 800,
     flexShrink: 0,
-    border: '3px solid rgba(255,255,255,0.15)',
+    border: '3px solid rgba(255,255,255,0.35)',
+    color: '#fff',
   },
+  heroInfo: { flex: 1, minWidth: 0 },
   heroName: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 800,
     color: '#fff',
     letterSpacing: '-0.02em',
+    marginBottom: 4,
   },
-  heroMeta: {
+  heroSub: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.55)',
-    marginTop: 4,
+    color: 'rgba(255,255,255,0.75)',
+    marginBottom: 10,
     display: 'flex',
-    gap: 14,
+    alignItems: 'center',
+    gap: 6,
     flexWrap: 'wrap' as any,
   },
-  heroMetaItem: { display: 'flex', alignItems: 'center', gap: 5 },
-  statusBadge: {
+  heroBadges: { display: 'flex', gap: 8, flexWrap: 'wrap' as any },
+  badge: {
     fontSize: 11,
     fontWeight: 700,
     borderRadius: 20,
     padding: '4px 12px',
-    marginTop: 10,
     display: 'inline-flex',
     alignItems: 'center',
     gap: 5,
   },
+  heroActions: {
+    display: 'flex',
+    gap: 8,
+    marginTop: 16,
+    flexWrap: 'wrap' as any,
+  },
+  actionBtn: {
+    fontSize: 12,
+    fontWeight: 700,
+    borderRadius: 8,
+    textTransform: 'none' as any,
+    padding: '6px 16px',
+    border: '1px solid rgba(255,255,255,0.2)',
+    color: '#fff',
+    background: 'rgba(255,255,255,0.08)',
+    '&:hover': { background: 'rgba(255,255,255,0.14)' },
+  },
+  actionBtnDanger: {
+    fontSize: 12,
+    fontWeight: 700,
+    borderRadius: 8,
+    textTransform: 'none' as any,
+    padding: '6px 16px',
+    border: '1px solid rgba(254,58,106,0.4)',
+    color: CORAL,
+    background: 'rgba(254,58,106,0.08)',
+    '&:hover': { background: 'rgba(254,58,106,0.15)' },
+  },
 
-  // ── Cards ──────────────────────────────────────────────────────
+  // ── Stats strip ──────────────────────────────────────────────────────────
+  statsStrip: {
+    display: 'flex',
+    gap: 14,
+    marginBottom: 24,
+    flexWrap: 'wrap' as any,
+  },
+  statCard: {
+    background: '#fff',
+    borderRadius: 12,
+    border: '1px solid rgba(0,0,0,0.07)',
+    padding: '14px 20px',
+    flex: 1,
+    minWidth: 100,
+    textAlign: 'center' as any,
+    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+  },
+  statNum: { fontSize: 22, fontWeight: 800, color: DARK, lineHeight: 1 },
+  statLabel: { fontSize: 11, color: '#9ca3af', marginTop: 5, fontWeight: 500 },
+
+  // ── Tabs ─────────────────────────────────────────────────────────────────
+  tabsRoot: {
+    background: '#fff',
+    borderRadius: 12,
+    border: '1px solid rgba(0,0,0,0.07)',
+    marginBottom: 20,
+    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+  },
+  tab: {
+    textTransform: 'none' as any,
+    fontWeight: 600,
+    fontSize: 13,
+    fontFamily: '"Plus Jakarta Sans", sans-serif',
+    minWidth: 100,
+  },
+  tabIndicator: { backgroundColor: CORAL, height: 3, borderRadius: 3 },
+
+  // ── Cards ────────────────────────────────────────────────────────────────
   card: {
     background: '#fff',
     borderRadius: 14,
-    border: '1px solid #ede8e3',
+    border: '1px solid rgba(0,0,0,0.07)',
     padding: '18px 22px',
-    marginBottom: theme.spacing(2),
+    marginBottom: 16,
+    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
   },
   cardTitle: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: 700,
-    color: '#8a8f99',
+    color: '#9ca3af',
     textTransform: 'uppercase' as any,
-    letterSpacing: '0.06em',
+    letterSpacing: '0.07em',
     marginBottom: 14,
-  },
-  infoRow: {
     display: 'flex',
     alignItems: 'center',
+    gap: 6,
+  },
+  row: {
+    display: 'flex',
+    alignItems: 'flex-start',
     gap: 10,
-    padding: '7px 0',
-    borderBottom: '1px solid #f3ede9',
+    padding: '9px 0',
+    borderBottom: '1px solid #f3f4f6',
     '&:last-child': { borderBottom: 'none' },
   },
-  infoIcon: { fontSize: 16, color: '#c9c4bf', flexShrink: 0 },
-  infoLabel: { fontSize: 12, color: '#9ca3af', minWidth: 80 },
-  infoValue: { fontSize: 13, fontWeight: 600, color: DARK },
+  rowIcon: { fontSize: 15, color: '#d1d5db', flexShrink: 0, marginTop: 1 },
+  rowLabel: { fontSize: 12, color: '#9ca3af', minWidth: 110, flexShrink: 0 },
+  rowValue: { fontSize: 13, fontWeight: 600, color: DARK },
 
-  // ── Course card ────────────────────────────────────────────────
+  // ── Course card ──────────────────────────────────────────────────────────
   courseCard: {
     background: '#fff',
-    borderRadius: 14,
-    border: '1px solid #ede8e3',
+    borderRadius: 12,
+    border: '1px solid rgba(0,0,0,0.07)',
     padding: '16px 20px',
     marginBottom: 12,
     transition: 'box-shadow 0.15s',
     '&:hover': { boxShadow: '0 4px 16px rgba(0,0,0,0.08)' },
   },
-  courseTitle: { fontSize: 15, fontWeight: 700, color: DARK, marginBottom: 4 },
-  courseInstructor: { fontSize: 12, color: '#9ca3af', marginBottom: 12 },
+  courseHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+  },
+  courseTitle: { fontSize: 14, fontWeight: 700, color: DARK },
+  courseInstructor: { fontSize: 12, color: '#9ca3af', marginBottom: 10 },
   progressRow: {
     display: 'flex',
     justifyContent: 'space-between',
     marginBottom: 5,
   },
   progressLabel: { fontSize: 12, color: '#6b7280' },
-  progressValue: { fontSize: 12, fontWeight: 700, color: CORAL },
-  progressBar: { borderRadius: 4, height: 6, backgroundColor: '#f3ede9' },
-  enrolledBadge: {
-    fontSize: 11,
-    fontWeight: 700,
-    borderRadius: 20,
-    padding: '2px 10px',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 8,
-  },
+  progressPct: { fontSize: 12, fontWeight: 700, color: CORAL },
+  progressBar: { borderRadius: 4, height: 6 },
 
-  // ── Stats row ──────────────────────────────────────────────────
-  statsRow: {
+  // ── Attendance ───────────────────────────────────────────────────────────
+  attendanceRow: {
     display: 'flex',
-    gap: 16,
-    marginBottom: theme.spacing(2.5),
-    flexWrap: 'wrap' as any,
+    alignItems: 'center',
+    gap: 12,
+    padding: '10px 0',
+    borderBottom: '1px solid #f3f4f6',
+    '&:last-child': { borderBottom: 'none' },
   },
-  statCard: {
-    background: '#fff',
-    borderRadius: 12,
-    border: '1px solid #ede8e3',
-    padding: '14px 20px',
-    flex: 1,
-    minWidth: 110,
-    textAlign: 'center' as any,
+  attendanceDot: {
+    width: 8,
+    height: 8,
+    borderRadius: '50%',
+    flexShrink: 0,
   },
-  statNum: { fontSize: 24, fontWeight: 800, color: DARK, lineHeight: 1 },
-  statLabel: { fontSize: 11, color: '#9ca3af', marginTop: 4 },
 
   emptyBox: {
     textAlign: 'center' as any,
-    padding: '40px 20px',
+    padding: '48px 20px',
     color: '#9ca3af',
   },
 }));
 
-function nameInitials(name: string) {
+const statusColor: Record<string, { bg: string; color: string }> = {
+  Enrolled: { bg: 'rgba(254,58,106,0.08)', color: CORAL },
+  InProgress: { bg: 'rgba(59,130,246,0.08)', color: '#3b82f6' },
+  Completed: { bg: 'rgba(16,185,129,0.1)', color: '#10b981' },
+  Dropped: { bg: 'rgba(156,163,175,0.12)', color: '#6b7280' },
+  Pending: { bg: 'rgba(245,158,11,0.1)', color: '#f59e0b' },
+};
+
+function initials(name: string) {
   return (name || '')
     .split(' ')
     .slice(0, 2)
     .map((n) => n[0])
     .join('')
     .toUpperCase();
+}
+
+function fmtDate(d: any) {
+  if (!d) return '—';
+  try {
+    return new Date(d).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return '—';
+  }
 }
 
 type Props = RouteComponentProps;
@@ -179,13 +283,27 @@ const AdminStudentDetails = (props: Props) => {
 
   const [student, setStudent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState(0);
+  const [attendance, setAttendance] = useState<any[]>([]);
 
   useEffect(() => {
     if (!studentId) return;
     setLoading(true);
     get(
       `${remoteRoutes.students}/${studentId}`,
-      (data) => setStudent(data),
+      (data) => {
+        setStudent(data);
+        // fetch attendance history
+        get(
+          `${remoteRoutes.studentAttendanceHistory}?contactId=${
+            data.contactId || studentId
+          }&limit=20`,
+          (hist: any) =>
+            setAttendance(Array.isArray(hist) ? hist : hist?.records || []),
+          undefined,
+          () => {},
+        );
+      },
       undefined,
       () => setLoading(false),
     );
@@ -224,27 +342,39 @@ const AdminStudentDetails = (props: Props) => {
     );
   }
 
-  // Normalise data shapes from the server
+  // ── Normalise data ────────────────────────────────────────────────────────
   const person = student.contact?.person || {};
   const fullName =
     [person.firstName, person.lastName].filter(Boolean).join(' ') ||
+    student.fullName ||
     'Unknown Student';
-  const email = student.contact?.email?.[0]?.value || student.email || '';
+  const email =
+    student.contact?.email?.[0]?.value ||
+    student.email ||
+    student.loginEmail ||
+    '';
   const phone = student.contact?.phone?.[0]?.value || student.phone || '';
   const hub = student.hub?.name || student.hubName || '—';
   const isActive = student.isActive !== false;
   const enrollments: any[] = student.enrollments || [];
 
   const completedCount = enrollments.filter(
-    (e: any) => e.status === 'Completed',
+    (e) => e.status === 'Completed',
+  ).length;
+  const activeCount = enrollments.filter(
+    (e) => e.status === 'Enrolled' || e.status === 'InProgress',
   ).length;
   const avgProgress = enrollments.length
     ? Math.round(
-        enrollments.reduce((s: number, e: any) => s + (e.progress || 0), 0) /
+        enrollments.reduce((s, e) => s + (e.progress || 0), 0) /
           enrollments.length,
       )
     : 0;
 
+  const attendancePct =
+    student.attendanceRate != null ? `${student.attendanceRate}%` : '—';
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <Layout>
       <div className={classes.root}>
@@ -262,56 +392,113 @@ const AdminStudentDetails = (props: Props) => {
           Back to Students
         </Button>
 
-        {/* Hero */}
-        <div className={classes.heroBanner}>
-          <Avatar className={classes.avatar}>{nameInitials(fullName)}</Avatar>
-          <div style={{ flex: 1 }}>
-            <div className={classes.heroName}>{fullName}</div>
-            <div className={classes.heroMeta}>
-              {email && (
-                <span className={classes.heroMetaItem}>
-                  <EmailIcon style={{ fontSize: 13 }} /> {email}
-                </span>
-              )}
-              {phone && (
-                <span className={classes.heroMetaItem}>
-                  <PhoneIcon style={{ fontSize: 13 }} /> {phone}
-                </span>
-              )}
-              {hub !== '—' && (
-                <span className={classes.heroMetaItem}>
-                  <LocationOnIcon style={{ fontSize: 13 }} /> {hub}
-                </span>
-              )}
-            </div>
-            <div>
-              <span
-                className={classes.statusBadge}
-                style={
-                  isActive
-                    ? { background: 'rgba(16,185,129,0.15)', color: '#10b981' }
-                    : { background: 'rgba(156,163,175,0.15)', color: '#6b7280' }
-                }
-              >
-                {isActive ? (
+        {/* ── Hero ── */}
+        <div className={classes.hero}>
+          <div className={classes.heroTop}>
+            <Avatar className={classes.avatar}>{initials(fullName)}</Avatar>
+            <div className={classes.heroInfo}>
+              <div className={classes.heroName}>{fullName}</div>
+              <div className={classes.heroSub}>
+                {email && (
                   <>
-                    <CheckCircleIcon style={{ fontSize: 13 }} /> Active Student
-                  </>
-                ) : (
-                  <>
-                    <WatchLaterIcon style={{ fontSize: 13 }} /> Inactive
+                    <EmailIcon style={{ fontSize: 13 }} />
+                    {email}
                   </>
                 )}
-              </span>
+                {phone && (
+                  <>
+                    <PhoneIcon style={{ fontSize: 13, marginLeft: 8 }} />
+                    {phone}
+                  </>
+                )}
+                {hub !== '—' && (
+                  <>
+                    <LocationOnIcon style={{ fontSize: 13, marginLeft: 8 }} />
+                    {hub}
+                  </>
+                )}
+              </div>
+              <div className={classes.heroBadges}>
+                <span
+                  className={classes.badge}
+                  style={
+                    isActive
+                      ? {
+                          background: 'rgba(16,185,129,0.15)',
+                          color: '#10b981',
+                        }
+                      : {
+                          background: 'rgba(156,163,175,0.15)',
+                          color: '#9ca3af',
+                        }
+                  }
+                >
+                  {isActive ? (
+                    <>
+                      <CheckCircleIcon style={{ fontSize: 12 }} /> Active
+                    </>
+                  ) : (
+                    <>
+                      <BlockIcon style={{ fontSize: 12 }} /> Inactive
+                    </>
+                  )}
+                </span>
+                {student.studentId && (
+                  <span
+                    className={classes.badge}
+                    style={{
+                      background: 'rgba(255,255,255,0.1)',
+                      color: 'rgba(255,255,255,0.6)',
+                    }}
+                  >
+                    ID: {student.studentId}
+                  </span>
+                )}
+                {person.gender && (
+                  <span
+                    className={classes.badge}
+                    style={{
+                      background: 'rgba(255,255,255,0.08)',
+                      color: 'rgba(255,255,255,0.5)',
+                    }}
+                  >
+                    {person.gender}
+                  </span>
+                )}
+              </div>
             </div>
+          </div>
+
+          <div className={classes.heroActions}>
+            <Button className={classes.actionBtn} size="small">
+              Edit Profile
+            </Button>
+            <Button
+              className={classes.actionBtn}
+              size="small"
+              startIcon={<VpnKeyIcon style={{ fontSize: 14 }} />}
+            >
+              Reset Password
+            </Button>
+            <Button
+              className={classes.actionBtnDanger}
+              size="small"
+              startIcon={<BlockIcon style={{ fontSize: 14 }} />}
+            >
+              {isActive ? 'Deactivate' : 'Activate'} Account
+            </Button>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className={classes.statsRow}>
+        {/* ── Stats strip ── */}
+        <div className={classes.statsStrip}>
           <div className={classes.statCard}>
             <div className={classes.statNum}>{enrollments.length}</div>
-            <div className={classes.statLabel}>Courses Enrolled</div>
+            <div className={classes.statLabel}>Total Courses</div>
+          </div>
+          <div className={classes.statCard}>
+            <div className={classes.statNum}>{activeCount}</div>
+            <div className={classes.statLabel}>Active Courses</div>
           </div>
           <div className={classes.statCard}>
             <div className={classes.statNum}>{completedCount}</div>
@@ -322,170 +509,377 @@ const AdminStudentDetails = (props: Props) => {
             <div className={classes.statLabel}>Avg Progress</div>
           </div>
           <div className={classes.statCard}>
-            <div className={classes.statNum}>
-              {
-                enrollments.filter(
-                  (e: any) =>
-                    e.status === 'Enrolled' || e.status === 'InProgress',
-                ).length
-              }
-            </div>
-            <div className={classes.statLabel}>Active Courses</div>
+            <div className={classes.statNum}>{attendancePct}</div>
+            <div className={classes.statLabel}>Attendance Rate</div>
           </div>
         </div>
 
-        <Grid container spacing={2}>
-          {/* Left: personal info */}
-          <Grid item xs={12} md={4}>
-            <div className={classes.card}>
-              <div className={classes.cardTitle}>Personal Info</div>
-              <div className={classes.infoRow}>
-                <PersonIcon className={classes.infoIcon} />
-                <span className={classes.infoLabel}>Full name</span>
-                <span className={classes.infoValue}>{fullName}</span>
-              </div>
-              {email && (
-                <div className={classes.infoRow}>
-                  <EmailIcon className={classes.infoIcon} />
-                  <span className={classes.infoLabel}>Email</span>
-                  <span className={classes.infoValue}>{email}</span>
+        {/* ── Tabs ── */}
+        <div className={classes.tabsRoot}>
+          <Tabs
+            value={tab}
+            onChange={(_e, v) => setTab(v)}
+            TabIndicatorProps={{ className: classes.tabIndicator }}
+          >
+            <Tab label="Overview" className={classes.tab} />
+            <Tab label="Courses" className={classes.tab} />
+            <Tab label="Attendance" className={classes.tab} />
+          </Tabs>
+        </div>
+
+        {/* ── TAB 0: Overview ── */}
+        {tab === 0 && (
+          <Grid container spacing={2}>
+            {/* Bio data */}
+            <Grid item xs={12} md={6}>
+              <div className={classes.card}>
+                <div className={classes.cardTitle}>
+                  <PersonIcon style={{ fontSize: 14 }} /> Bio Data
                 </div>
-              )}
-              {phone && (
-                <div className={classes.infoRow}>
-                  <PhoneIcon className={classes.infoIcon} />
-                  <span className={classes.infoLabel}>Phone</span>
-                  <span className={classes.infoValue}>{phone}</span>
+                <div className={classes.row}>
+                  <PersonIcon className={classes.rowIcon} />
+                  <span className={classes.rowLabel}>Full Name</span>
+                  <span className={classes.rowValue}>{fullName}</span>
                 </div>
-              )}
-              <div className={classes.infoRow}>
-                <LocationOnIcon className={classes.infoIcon} />
-                <span className={classes.infoLabel}>Hub</span>
-                <span className={classes.infoValue}>{hub}</span>
+                {person.dateOfBirth && (
+                  <div className={classes.row}>
+                    <CakeIcon className={classes.rowIcon} />
+                    <span className={classes.rowLabel}>Date of Birth</span>
+                    <span className={classes.rowValue}>
+                      {fmtDate(person.dateOfBirth)}
+                    </span>
+                  </div>
+                )}
+                {person.gender && (
+                  <div className={classes.row}>
+                    <WcIcon className={classes.rowIcon} />
+                    <span className={classes.rowLabel}>Gender</span>
+                    <span className={classes.rowValue}>{person.gender}</span>
+                  </div>
+                )}
+                {person.nationality && (
+                  <div className={classes.row}>
+                    <LocationOnIcon className={classes.rowIcon} />
+                    <span className={classes.rowLabel}>Nationality</span>
+                    <span className={classes.rowValue}>
+                      {person.nationality}
+                    </span>
+                  </div>
+                )}
+                {(student.contact?.address?.[0]?.street || student.address) && (
+                  <div className={classes.row}>
+                    <LocationOnIcon className={classes.rowIcon} />
+                    <span className={classes.rowLabel}>Address</span>
+                    <span className={classes.rowValue}>
+                      {student.contact?.address?.[0]?.street || student.address}
+                    </span>
+                  </div>
+                )}
+                {student.bio && (
+                  <div className={classes.row}>
+                    <PersonIcon className={classes.rowIcon} />
+                    <span className={classes.rowLabel}>Bio</span>
+                    <span
+                      className={classes.rowValue}
+                      style={{
+                        fontWeight: 400,
+                        fontSize: 12,
+                        color: '#6b7280',
+                      }}
+                    >
+                      {student.bio}
+                    </span>
+                  </div>
+                )}
               </div>
-              {person.gender && (
-                <div className={classes.infoRow}>
-                  <PersonIcon className={classes.infoIcon} />
-                  <span className={classes.infoLabel}>Gender</span>
-                  <span className={classes.infoValue}>{person.gender}</span>
+
+              {/* Contact */}
+              <div className={classes.card}>
+                <div className={classes.cardTitle}>
+                  <PhoneIcon style={{ fontSize: 14 }} /> Contact Info
                 </div>
-              )}
-              <div className={classes.infoRow}>
-                <CheckCircleIcon className={classes.infoIcon} />
-                <span className={classes.infoLabel}>Status</span>
-                <span
-                  className={classes.infoValue}
-                  style={{ color: isActive ? '#10b981' : '#6b7280' }}
-                >
-                  {isActive ? 'Active' : 'Inactive'}
-                </span>
+                {email && (
+                  <div className={classes.row}>
+                    <EmailIcon className={classes.rowIcon} />
+                    <span className={classes.rowLabel}>Email</span>
+                    <span className={classes.rowValue}>{email}</span>
+                  </div>
+                )}
+                {phone && (
+                  <div className={classes.row}>
+                    <PhoneIcon className={classes.rowIcon} />
+                    <span className={classes.rowLabel}>Phone</span>
+                    <span className={classes.rowValue}>{phone}</span>
+                  </div>
+                )}
+                {student.emergencyContact && (
+                  <div className={classes.row}>
+                    <PhoneIcon className={classes.rowIcon} />
+                    <span className={classes.rowLabel}>Emergency</span>
+                    <span className={classes.rowValue}>
+                      {student.emergencyContact}
+                    </span>
+                  </div>
+                )}
+                <div className={classes.row}>
+                  <LocationOnIcon className={classes.rowIcon} />
+                  <span className={classes.rowLabel}>Hub</span>
+                  <span className={classes.rowValue}>{hub}</span>
+                </div>
               </div>
-              {student.registeredAt && (
-                <div className={classes.infoRow}>
-                  <WatchLaterIcon className={classes.infoIcon} />
-                  <span className={classes.infoLabel}>Joined</span>
-                  <span className={classes.infoValue}>
-                    {new Date(student.registeredAt).toLocaleDateString(
-                      'en-GB',
-                      { day: 'numeric', month: 'short', year: 'numeric' },
-                    )}
+            </Grid>
+
+            {/* Account / login info */}
+            <Grid item xs={12} md={6}>
+              <div className={classes.card}>
+                <div className={classes.cardTitle}>
+                  <VpnKeyIcon style={{ fontSize: 14 }} /> Account & Login
+                </div>
+                <div className={classes.row}>
+                  <EmailIcon className={classes.rowIcon} />
+                  <span className={classes.rowLabel}>Login Email</span>
+                  <span className={classes.rowValue}>{email || '—'}</span>
+                </div>
+                {student.username && (
+                  <div className={classes.row}>
+                    <PersonIcon className={classes.rowIcon} />
+                    <span className={classes.rowLabel}>Username</span>
+                    <span className={classes.rowValue}>{student.username}</span>
+                  </div>
+                )}
+                <div className={classes.row}>
+                  <CheckCircleIcon className={classes.rowIcon} />
+                  <span className={classes.rowLabel}>Status</span>
+                  <span
+                    className={classes.rowValue}
+                    style={{ color: isActive ? '#10b981' : '#9ca3af' }}
+                  >
+                    {isActive ? 'Active' : 'Inactive'}
                   </span>
                 </div>
-              )}
-            </div>
-          </Grid>
+                {student.registeredAt && (
+                  <div className={classes.row}>
+                    <EventIcon className={classes.rowIcon} />
+                    <span className={classes.rowLabel}>Joined</span>
+                    <span className={classes.rowValue}>
+                      {fmtDate(student.registeredAt)}
+                    </span>
+                  </div>
+                )}
+                {student.lastLogin && (
+                  <div className={classes.row}>
+                    <AccessTimeIcon className={classes.rowIcon} />
+                    <span className={classes.rowLabel}>Last Login</span>
+                    <span className={classes.rowValue}>
+                      {fmtDate(student.lastLogin)}
+                    </span>
+                  </div>
+                )}
+                {student.mustChangePassword != null && (
+                  <div className={classes.row}>
+                    <VpnKeyIcon className={classes.rowIcon} />
+                    <span className={classes.rowLabel}>Must Change Pwd</span>
+                    <span className={classes.rowValue}>
+                      {student.mustChangePassword ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                )}
+                {student.role && (
+                  <div className={classes.row}>
+                    <PersonIcon className={classes.rowIcon} />
+                    <span className={classes.rowLabel}>Role</span>
+                    <span className={classes.rowValue}>{student.role}</span>
+                  </div>
+                )}
+              </div>
 
-          {/* Right: courses */}
-          <Grid item xs={12} md={8}>
-            <div style={{ marginBottom: 8 }}>
-              <Typography
-                style={{
-                  fontWeight: 700,
-                  fontSize: 15,
-                  color: DARK,
-                  marginBottom: 12,
-                }}
-              >
+              {/* Performance summary */}
+              <div className={classes.card}>
+                <div className={classes.cardTitle}>
+                  <TrendingUpIcon style={{ fontSize: 14 }} /> Performance
+                  Summary
+                </div>
+                <div className={classes.row}>
+                  <SchoolIcon className={classes.rowIcon} />
+                  <span className={classes.rowLabel}>Courses Enrolled</span>
+                  <span className={classes.rowValue}>{enrollments.length}</span>
+                </div>
+                <div className={classes.row}>
+                  <CheckCircleIcon className={classes.rowIcon} />
+                  <span className={classes.rowLabel}>Completed</span>
+                  <span className={classes.rowValue}>{completedCount}</span>
+                </div>
+                <div className={classes.row}>
+                  <TrendingUpIcon className={classes.rowIcon} />
+                  <span className={classes.rowLabel}>Avg Progress</span>
+                  <span className={classes.rowValue} style={{ color: CORAL }}>
+                    {avgProgress}%
+                  </span>
+                </div>
+                <div className={classes.row}>
+                  <HowToRegIcon className={classes.rowIcon} />
+                  <span className={classes.rowLabel}>Attendance Rate</span>
+                  <span className={classes.rowValue}>{attendancePct}</span>
+                </div>
+                {student.lastActivity && (
+                  <div className={classes.row}>
+                    <AccessTimeIcon className={classes.rowIcon} />
+                    <span className={classes.rowLabel}>Last Active</span>
+                    <span className={classes.rowValue}>
+                      {fmtDate(student.lastActivity)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </Grid>
+          </Grid>
+        )}
+
+        {/* ── TAB 1: Courses ── */}
+        {tab === 1 && (
+          <>
+            {enrollments.length === 0 ? (
+              <div className={classes.emptyBox}>
                 <SchoolIcon
                   style={{
-                    fontSize: 16,
-                    marginRight: 6,
-                    verticalAlign: 'middle',
-                    color: CORAL,
+                    fontSize: 44,
+                    color: '#e0e0e0',
+                    display: 'block',
+                    margin: '0 auto 10px',
                   }}
                 />
-                Enrolled Courses
-              </Typography>
-              {enrollments.length === 0 ? (
-                <div className={classes.emptyBox}>
-                  <SchoolIcon
+                <Typography style={{ fontWeight: 600, color: '#9ca3af' }}>
+                  Not enrolled in any courses yet
+                </Typography>
+              </div>
+            ) : (
+              enrollments.map((en: any) => {
+                const course = en.course || {};
+                const title = course.title || course.name || 'Untitled Course';
+                const instructor = course.instructor?.contact?.person
+                  ? `${course.instructor.contact.person.firstName} ${course.instructor.contact.person.lastName}`
+                  : course.instructorName || en.instructorName || '';
+                const progress = en.progress || 0;
+                const status: string = en.status || 'Enrolled';
+                const sc = statusColor[status] || statusColor.Enrolled;
+                return (
+                  <div key={en.id} className={classes.courseCard}>
+                    <div className={classes.courseHeader}>
+                      <div className={classes.courseTitle}>{title}</div>
+                      <Chip
+                        label={status}
+                        size="small"
+                        style={{
+                          background: sc.bg,
+                          color: sc.color,
+                          fontWeight: 700,
+                          fontSize: 11,
+                          height: 22,
+                        }}
+                      />
+                    </div>
+                    {instructor && (
+                      <div className={classes.courseInstructor}>
+                        By {instructor}
+                      </div>
+                    )}
+                    {en.enrolledAt && (
+                      <div
+                        className={classes.courseInstructor}
+                        style={{ marginBottom: 10 }}
+                      >
+                        Enrolled: {fmtDate(en.enrolledAt)}
+                        {en.completedAt
+                          ? ` · Completed: ${fmtDate(en.completedAt)}`
+                          : ''}
+                      </div>
+                    )}
+                    <div className={classes.progressRow}>
+                      <span className={classes.progressLabel}>Progress</span>
+                      <span className={classes.progressPct}>{progress}%</span>
+                    </div>
+                    <LinearProgress
+                      variant="determinate"
+                      value={progress}
+                      className={classes.progressBar}
+                      style={{ backgroundColor: '#f3f4f6' }}
+                    />
+                  </div>
+                );
+              })
+            )}
+          </>
+        )}
+
+        {/* ── TAB 2: Attendance ── */}
+        {tab === 2 && (
+          <div className={classes.card}>
+            <div className={classes.cardTitle}>
+              <HowToRegIcon style={{ fontSize: 14 }} /> Attendance History
+            </div>
+            {attendance.length === 0 ? (
+              <div className={classes.emptyBox}>
+                <HowToRegIcon
+                  style={{
+                    fontSize: 44,
+                    color: '#e0e0e0',
+                    display: 'block',
+                    margin: '0 auto 10px',
+                  }}
+                />
+                <Typography style={{ fontWeight: 600, color: '#9ca3af' }}>
+                  No attendance records found
+                </Typography>
+              </div>
+            ) : (
+              attendance.map((rec: any, i: number) => (
+                <div key={rec.id || i} className={classes.attendanceRow}>
+                  <div
+                    className={classes.attendanceDot}
                     style={{
-                      fontSize: 40,
-                      color: '#d1d5db',
-                      marginBottom: 8,
-                      display: 'block',
-                      margin: '0 auto 8px',
+                      background: rec.present !== false ? '#10b981' : '#ef4444',
                     }}
                   />
-                  <Typography>Not enrolled in any courses yet</Typography>
-                </div>
-              ) : (
-                enrollments.map((enrollment: any) => {
-                  const course = enrollment.course || {};
-                  const title =
-                    course.title || course.name || 'Untitled Course';
-                  const instructor = course.instructor?.contact?.person
-                    ? `${course.instructor.contact.person.firstName} ${course.instructor.contact.person.lastName}`
-                    : course.instructorName || '';
-                  const progress = enrollment.progress || 0;
-                  const status: string = enrollment.status || 'Enrolled';
-                  const statusColor: Record<
-                    string,
-                    { bg: string; color: string }
-                  > = {
-                    Enrolled: { bg: 'rgba(254,58,106,0.08)', color: CORAL },
-                    InProgress: {
-                      bg: 'rgba(59,130,246,0.08)',
-                      color: '#3b82f6',
-                    },
-                    Completed: { bg: 'rgba(16,185,129,0.1)', color: '#10b981' },
-                    Dropped: { bg: 'rgba(156,163,175,0.12)', color: '#6b7280' },
-                    Pending: { bg: 'rgba(245,158,11,0.1)', color: '#f59e0b' },
-                  };
-                  const sc = statusColor[status] || statusColor.Enrolled;
-                  return (
-                    <div key={enrollment.id} className={classes.courseCard}>
-                      <div className={classes.courseTitle}>{title}</div>
-                      {instructor && (
-                        <div className={classes.courseInstructor}>
-                          Instructor: {instructor}
-                        </div>
-                      )}
-                      <div className={classes.progressRow}>
-                        <span className={classes.progressLabel}>Progress</span>
-                        <span className={classes.progressValue}>
-                          {progress}%
-                        </span>
-                      </div>
-                      <LinearProgress
-                        variant="determinate"
-                        value={progress}
-                        classes={{ root: classes.progressBar }}
-                        style={{ backgroundColor: '#f3ede9' }}
-                      />
-                      <span
-                        className={classes.enrolledBadge}
-                        style={{ background: sc.bg, color: sc.color }}
-                      >
-                        {status}
-                      </span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: DARK }}>
+                      {rec.sessionName ||
+                        rec.courseName ||
+                        rec.className ||
+                        'Session'}
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </Grid>
-        </Grid>
+                    <div style={{ fontSize: 11, color: '#9ca3af' }}>
+                      {fmtDate(rec.date || rec.checkedInAt)}
+                      {rec.checkedInAt &&
+                        ` · Checked in: ${new Date(
+                          rec.checkedInAt,
+                        ).toLocaleTimeString('en-GB', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}`}
+                    </div>
+                  </div>
+                  <Chip
+                    label={
+                      rec.method ||
+                      (rec.present !== false ? 'Present' : 'Absent')
+                    }
+                    size="small"
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      height: 20,
+                      background:
+                        rec.present !== false
+                          ? 'rgba(16,185,129,0.1)'
+                          : 'rgba(239,68,68,0.1)',
+                      color: rec.present !== false ? '#10b981' : '#ef4444',
+                    }}
+                  />
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </Layout>
   );

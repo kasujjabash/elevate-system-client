@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Typography } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
+import { makeStyles, Theme } from '@material-ui/core/styles';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 import {
@@ -35,8 +35,11 @@ const HOURS = [
 ];
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-const useStyles = makeStyles(() => ({
-  root: { padding: 24 },
+const useStyles = makeStyles((theme: Theme) => ({
+  root: {
+    padding: 24,
+    [theme.breakpoints.down('xs')]: { padding: 12 },
+  },
   breadcrumb: { fontSize: 13, color: '#8a8f99', marginBottom: 6 },
   breadcrumbSep: { margin: '0 6px', color: '#c4c8d0' },
   breadcrumbActive: { color: CORAL },
@@ -52,9 +55,22 @@ const useStyles = makeStyles(() => ({
     alignItems: 'center',
     overflow: 'hidden',
     position: 'relative' as any,
+    [theme.breakpoints.down('xs')]: {
+      padding: '16px 20px',
+    },
   },
-  bannerTitle: { fontSize: 20, fontWeight: 700, marginBottom: 8 },
-  bannerDesc: { fontSize: 13, opacity: 0.9, maxWidth: 420 },
+  bannerTitle: {
+    fontSize: 20,
+    fontWeight: 700,
+    marginBottom: 8,
+    [theme.breakpoints.down('xs')]: { fontSize: 16 },
+  },
+  bannerDesc: {
+    fontSize: 13,
+    opacity: 0.9,
+    maxWidth: 420,
+    [theme.breakpoints.down('xs')]: { fontSize: 12 },
+  },
   bannerDeco: {
     position: 'absolute' as any,
     right: 24,
@@ -66,6 +82,7 @@ const useStyles = makeStyles(() => ({
     display: 'flex',
     flexDirection: 'column' as any,
     gap: 4,
+    [theme.breakpoints.down('sm')]: { display: 'none' },
   },
   decoLine: {
     height: 8,
@@ -79,8 +96,16 @@ const useStyles = makeStyles(() => ({
     alignItems: 'center',
     gap: 12,
     marginBottom: 20,
+    flexWrap: 'wrap' as any,
+    [theme.breakpoints.down('xs')]: { gap: 8 },
   },
-  weekLabel: { fontSize: 14, fontWeight: 600, color: DARK, flex: 1 },
+  weekLabel: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: DARK,
+    flex: 1,
+    [theme.breakpoints.down('xs')]: { fontSize: 12, width: '100%' },
+  },
   navBtn: {
     width: 28,
     height: 28,
@@ -105,17 +130,23 @@ const useStyles = makeStyles(() => ({
     display: 'flex',
     gap: 20,
     alignItems: 'flex-start',
+    [theme.breakpoints.down('sm')]: {
+      flexDirection: 'column' as any,
+    },
   },
   gridWrap: {
     flex: 1,
+    minWidth: 0,
     background: '#fff',
     borderRadius: 12,
     border: '1px solid rgba(0,0,0,0.08)',
-    overflow: 'hidden',
+    overflowX: 'auto' as any,
+    [theme.breakpoints.down('sm')]: { width: '100%' },
   },
   grid: {
     display: 'grid',
     gridTemplateColumns: '72px repeat(7, 1fr)',
+    minWidth: 640,
   },
   headerCell: {
     padding: '10px 6px',
@@ -161,6 +192,7 @@ const useStyles = makeStyles(() => ({
   sidebar: {
     width: 240,
     flexShrink: 0,
+    [theme.breakpoints.down('sm')]: { width: '100%' },
   },
   sidebarTitle: {
     fontSize: 14,
@@ -187,12 +219,19 @@ const useStyles = makeStyles(() => ({
 }));
 
 const parseHour = (timeStr: string) => {
-  const m = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-  if (!m) return 8;
-  let h = parseInt(m[1], 10);
-  if (m[3].toUpperCase() === 'PM' && h !== 12) h += 12;
-  if (m[3].toUpperCase() === 'AM' && h === 12) h = 0;
-  return h;
+  if (!timeStr) return 8;
+  // 12-hour: "09:00 AM" / "2:00 PM"
+  const ampm = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (ampm) {
+    let h = parseInt(ampm[1], 10);
+    if (ampm[3].toUpperCase() === 'PM' && h !== 12) h += 12;
+    if (ampm[3].toUpperCase() === 'AM' && h === 12) h = 0;
+    return h;
+  }
+  // 24-hour: "09:00" / "14:00" / "09:00:00"
+  const h24 = timeStr.match(/^(\d{1,2}):(\d{2})/);
+  if (h24) return parseInt(h24[1], 10);
+  return 8;
 };
 
 const MyTimetable = () => {
@@ -204,10 +243,11 @@ const MyTimetable = () => {
   );
 
   useEffect(() => {
-    if (!user?.contactId) return;
+    const sid = user?.contactId || user?.id;
+    if (!sid) return;
     search(
       remoteRoutes.timetable,
-      { studentId: user.contactId, contactId: user.contactId },
+      { studentId: sid, contactId: sid },
       (data: any) =>
         setSessions(Array.isArray(data) ? data : data?.sessions || []),
       undefined,
@@ -218,8 +258,46 @@ const MyTimetable = () => {
   const weekEnd = addDays(weekStart, 6);
   const weekDates = DAYS.map((_, i) => addDays(weekStart, i));
 
-  // Filter sessions in this week
+  // Build grid lookup: dayIndex (Mon=0) -> hourIndex -> session
+  // Handles both recurring sessions (dayOfWeek field) and date-specific sessions
+  const gridMap: Record<number, Record<number, any>> = {};
+
+  sessions.forEach((s) => {
+    // Recurring session — has dayOfWeek (0=Sun JS convention)
+    // Accept both number and string values (e.g. Prisma returns Int but JSON may vary)
+    if (s.dayOfWeek != null) {
+      const dayIdx = (Number(s.dayOfWeek) + 6) % 7; // convert to Mon=0
+      const hour = s.startTime ? parseHour(s.startTime) : 8;
+      const hourIdx = hour - 8;
+      if (hourIdx >= 0 && hourIdx < HOURS.length) {
+        if (!gridMap[dayIdx]) gridMap[dayIdx] = {};
+        if (!gridMap[dayIdx][hourIdx]) gridMap[dayIdx][hourIdx] = s;
+      }
+      return;
+    }
+
+    // Date-specific session — only show if it falls in the current week
+    const raw = s.startDate || s.date || s.sessionDate;
+    if (!raw) return;
+    try {
+      const d = typeof raw === 'string' ? parseISO(raw) : new Date(raw);
+      if (d >= weekStart && d <= weekEnd) {
+        const dayIdx = (d.getDay() + 6) % 7; // Mon=0
+        const hour = s.startTime ? parseHour(s.startTime) : d.getHours();
+        const hourIdx = hour - 8;
+        if (hourIdx >= 0 && hourIdx < HOURS.length) {
+          if (!gridMap[dayIdx]) gridMap[dayIdx] = {};
+          if (!gridMap[dayIdx][hourIdx]) gridMap[dayIdx][hourIdx] = s;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  });
+
+  // Sidebar list: recurring sessions always show; date-specific filtered to week
   const weekSessions = sessions.filter((s) => {
+    if (s.dayOfWeek != null) return true;
     const raw = s.startDate || s.date || s.sessionDate;
     if (!raw) return false;
     try {
@@ -227,25 +305,6 @@ const MyTimetable = () => {
       return d >= weekStart && d <= weekEnd;
     } catch {
       return false;
-    }
-  });
-
-  // Build grid lookup: dayIndex -> hourIndex -> session
-  const gridMap: Record<number, Record<number, any>> = {};
-  weekSessions.forEach((s) => {
-    const raw = s.startDate || s.date || s.sessionDate;
-    if (!raw) return;
-    try {
-      const d = typeof raw === 'string' ? parseISO(raw) : new Date(raw);
-      const dayIdx = (d.getDay() + 6) % 7; // Mon=0
-      const hour = s.startTime ? parseHour(s.startTime) : d.getHours();
-      const hourIdx = hour - 8;
-      if (hourIdx >= 0 && hourIdx < HOURS.length) {
-        if (!gridMap[dayIdx]) gridMap[dayIdx] = {};
-        gridMap[dayIdx][hourIdx] = s;
-      }
-    } catch {
-      // ignore
     }
   });
 
@@ -334,14 +393,27 @@ const MyTimetable = () => {
                       <div key={di} className={classes.dayCell}>
                         {ev && (
                           <div className={classes.eventBlock}>
-                            <div>
-                              {ev.moduleCode ||
-                                ev.course?.code ||
-                                ev.code ||
-                                '1.1'}
+                            <div
+                              style={{
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {ev.courseName ||
+                                ev.moduleName ||
+                                ev.name ||
+                                ev.title ||
+                                'Class'}
                             </div>
-                            <div style={{ fontWeight: 400, color: '#8a4050' }}>
-                              {ev.room || ev.location || 'Hub 102'}
+                            <div
+                              style={{
+                                fontWeight: 400,
+                                color: '#8a4050',
+                                fontSize: 10,
+                              }}
+                            >
+                              {ev.room || ev.location || ev.hubName || ''}
                             </div>
                           </div>
                         )}
@@ -358,33 +430,69 @@ const MyTimetable = () => {
             <div className={classes.sidebarTitle}>Events This Week</div>
             {weekSessions.length === 0 ? (
               <Typography style={{ fontSize: 13, color: '#8a8f99' }}>
-                No events scheduled for this week.
+                No classes scheduled for this week.
+                <br />
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: '#c0c4ce',
+                    marginTop: 6,
+                    display: 'block',
+                  }}
+                >
+                  Classes appear here once your admin adds sessions for your
+                  enrolled courses.
+                </span>
               </Typography>
             ) : (
               weekSessions.slice(0, 6).map((s, i) => {
-                const raw = s.startDate || s.date;
-                const d = raw
-                  ? typeof raw === 'string'
-                    ? parseISO(raw)
-                    : new Date(raw)
-                  : null;
+                const DAY_NAMES = [
+                  'Sun',
+                  'Mon',
+                  'Tue',
+                  'Wed',
+                  'Thu',
+                  'Fri',
+                  'Sat',
+                ];
+                let dateLabel = '—';
+                if (s.dayOfWeek != null) {
+                  // Show the actual date for this session in the current week
+                  const dow = Number(s.dayOfWeek); // 0=Sun
+                  const dayInWeek = weekDates[(dow + 6) % 7]; // convert to Mon=0
+                  dateLabel = format(dayInWeek, 'do MMM yyyy');
+                } else {
+                  const raw = s.startDate || s.date;
+                  if (raw) {
+                    try {
+                      const d =
+                        typeof raw === 'string' ? parseISO(raw) : new Date(raw);
+                      dateLabel = format(d, 'do MMM yyyy');
+                    } catch {
+                      /* ignore */
+                    }
+                  }
+                }
                 return (
                   <div key={s.id || i} className={classes.eventCard}>
                     <div className={classes.eventLabel}>Module</div>
                     <div className={classes.eventTitle}>
-                      {s.moduleName || s.name || s.title || 'UX Foundation'}
+                      {s.moduleName ||
+                        s.courseName ||
+                        s.name ||
+                        s.title ||
+                        'Class'}
                     </div>
                     <div className={classes.eventMeta}>
-                      {d ? format(d, 'do MMM yyyy') : '—'}
+                      {dateLabel}
                       <br />
                       {s.startTime && s.endTime
-                        ? `${s.startTime} - ${s.endTime}`
-                        : s.startTime || '08:00AM - 11:00AM'}
+                        ? `${s.startTime} – ${s.endTime}`
+                        : s.startTime || '—'}
                       <br />
-                      By{' '}
-                      {s.instructorName ||
-                        s.instructor?.name ||
-                        'Andrew Mukuye'}
+                      {s.instructorName || s.instructor?.name
+                        ? `By ${s.instructorName || s.instructor?.name}`
+                        : ''}
                     </div>
                   </div>
                 );

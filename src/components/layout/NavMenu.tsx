@@ -1,4 +1,4 @@
-import React, { Fragment } from 'react';
+import React from 'react';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
@@ -10,9 +10,8 @@ import BubbleChartIcon from '@material-ui/icons/BubbleChart';
 import AssessmentIcon from '@material-ui/icons/Assessment';
 import GradeIcon from '@material-ui/icons/Grade';
 import PlaylistAddCheckIcon from '@material-ui/icons/PlaylistAddCheck';
-import HelpOutlineIcon from '@material-ui/icons/HelpOutline';
 import NotificationsActiveIcon from '@material-ui/icons/NotificationsActive';
-import HowToRegIcon from '@material-ui/icons/HowToReg';
+
 import HomeIcon from '@material-ui/icons/Home';
 import MenuBookIcon from '@material-ui/icons/MenuBook';
 import LiveTvIcon from '@material-ui/icons/LiveTv';
@@ -22,17 +21,15 @@ import AssignmentTurnedInIcon from '@material-ui/icons/AssignmentTurnedIn';
 import LibraryBooksIcon from '@material-ui/icons/LibraryBooks';
 import PlayCircleOutlineIcon from '@material-ui/icons/PlayCircleOutline';
 import ExitToAppIcon from '@material-ui/icons/ExitToApp';
+import SupervisorAccountIcon from '@material-ui/icons/SupervisorAccount';
+import BusinessIcon from '@material-ui/icons/Business';
 import Divider from '@material-ui/core/Divider';
-import Collapse from '@material-ui/core/Collapse';
-import ExpandLess from '@material-ui/icons/ExpandLess';
-import ExpandMore from '@material-ui/icons/ExpandMore';
 import { useHistory, useLocation } from 'react-router-dom';
 import { createStyles, makeStyles, Theme, withStyles } from '@material-ui/core';
 import { useSelector, useDispatch } from 'react-redux';
 import { hasAnyRole, isStudent } from '../../data/appRoles';
 import { appPermissions, localRoutes } from '../../data/constants';
 import { IState } from '../../data/types';
-import { hasValue } from '../inputs/inputHelpers';
 import { handleLogout } from '../../data/coreActions';
 import elevateLogo from '../../assets/images/elevate-logo.png';
 
@@ -41,14 +38,13 @@ interface IAppRoute {
   name: string;
   route?: string;
   icon?: any;
-  items?: IAppRoute[];
 }
 
 const studentRoutes: IAppRoute[] = [
   { name: 'Home', route: localRoutes.dashboard, icon: HomeIcon },
-  { name: 'My Modules', route: localRoutes.myCourses, icon: MenuBookIcon },
+  { name: 'My Courses', route: localRoutes.myCourses, icon: MenuBookIcon },
   {
-    name: 'Courses',
+    name: 'Course Catalog',
     route: localRoutes.studentCourses,
     icon: LibraryBooksIcon,
   },
@@ -97,9 +93,27 @@ const staffRoutes: IAppRoute[] = [
     icon: BubbleChartIcon,
   },
   {
+    requiredRoles: [appPermissions.roleClassView, appPermissions.roleClassEdit],
+    name: 'Timetable',
+    route: localRoutes.timetable,
+    icon: DateRangeIcon,
+  },
+  {
+    requiredRoles: [appPermissions.roleClassView, appPermissions.roleClassEdit],
+    name: 'Assignments',
+    route: localRoutes.teacherAssignments,
+    icon: PlaylistAddCheckIcon,
+  },
+  {
+    requiredRoles: [appPermissions.roleClassView, appPermissions.roleClassEdit],
+    name: 'Exams',
+    route: localRoutes.exams,
+    icon: GradeIcon,
+  },
+  {
     requiredRoles: [
-      appPermissions.roleCourseEdit,
       appPermissions.roleCourseView,
+      appPermissions.roleCourseEdit,
     ],
     name: 'Announcements',
     route: localRoutes.adminAnnouncements,
@@ -112,40 +126,17 @@ const staffRoutes: IAppRoute[] = [
     icon: AssessmentIcon,
   },
   {
-    requiredRoles: [appPermissions.roleClassView, appPermissions.roleClassEdit],
-    name: 'Attendance',
-    route: localRoutes.attendance,
-    icon: HowToRegIcon,
-  },
-  {
-    requiredRoles: [appPermissions.roleClassView, appPermissions.roleClassEdit],
-    name: 'Exams',
-    route: localRoutes.exams,
-    icon: GradeIcon,
-  },
-  {
-    requiredRoles: [appPermissions.roleClassView, appPermissions.roleClassEdit],
-    name: 'Assignments',
-    route: localRoutes.teacherAssignments,
-    icon: PlaylistAddCheckIcon,
+    requiredRoles: [appPermissions.roleUserView, appPermissions.roleUserEdit],
+    name: 'Users & Roles',
+    route: localRoutes.users,
+    icon: SupervisorAccountIcon,
   },
   {
     requiredRoles: [appPermissions.roleUserView, appPermissions.roleUserEdit],
-    name: 'Admin',
-    route: localRoutes.settings,
-    icon: SettingsIcon,
-    items: [
-      { name: 'Manage Users', route: localRoutes.users },
-      { name: 'Manage Courses', route: localRoutes.adminCourses },
-      { name: 'Course Categories', route: localRoutes.courseCategories },
-      { name: 'Class Categories', route: localRoutes.classCategories },
-      { name: 'Class Fields', route: localRoutes.reportCategories },
-      { name: 'Hub Management', route: localRoutes.hubs },
-      { name: 'Settings', route: localRoutes.settings },
-      { name: 'Manage Help', route: localRoutes.manageHelp },
-    ],
+    name: 'Hubs',
+    route: localRoutes.hubs,
+    icon: BusinessIcon,
   },
-  { name: 'Help', route: localRoutes.help, icon: HelpOutlineIcon },
 ];
 
 const selectedBg = 'rgba(254,58,106,0.07)';
@@ -198,13 +189,6 @@ const useStyles = makeStyles((_theme: Theme) =>
       color: '#fe3a6a',
       '& span': { fontWeight: 600 },
     },
-    nestedItem: {
-      borderRadius: 6,
-      margin: '1px 10px 1px 22px',
-      width: 'calc(100% - 32px)',
-      padding: '8px 10px',
-      '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
-    },
   }),
 );
 
@@ -221,12 +205,8 @@ const NavMenu = (props: any) => {
   const history = useHistory();
   const location = useLocation();
   const dispatch = useDispatch();
-  const [open, setOpen] = React.useState<any>({});
   const user = useSelector((state: IState) => state.core.user);
   const student = isStudent(user);
-
-  const handleMenuClick = (name: string) => () =>
-    setOpen({ ...open, [name]: !open[name] });
 
   const onClick = (path: string) => () => {
     history.push(path);
@@ -239,11 +219,9 @@ const NavMenu = (props: any) => {
     location.pathname.indexOf(pathStr) > -1;
 
   const cleanRoutes = (r: IAppRoute[]) =>
-    r.filter((it) => {
-      let { items } = it;
-      if (items && hasValue(items)) items = cleanRoutes(items);
-      return it.requiredRoles ? hasAnyRole(user, it.requiredRoles) : true;
-    });
+    r.filter((it) =>
+      it.requiredRoles ? hasAnyRole(user, it.requiredRoles) : true,
+    );
 
   const Logo = (
     <div className={classes.logoHolder}>
@@ -335,68 +313,13 @@ const NavMenu = (props: any) => {
       <List className={classes.list}>
         {finalRoutes.map((it) => {
           const Icon = it.icon;
-          const selected = isSelected(it.route || it.name.toLowerCase());
-          if (it.items) {
-            return (
-              <Fragment key={it.name}>
-                <StyledListItem
-                  button
-                  onClick={handleMenuClick(it.name)}
-                  className={classes.item}
-                  selected={selected}
-                  classes={{ selected: classes.selectedItem }}
-                >
-                  <ListItemIcon
-                    className={selected ? classes.iconSelected : classes.icon}
-                  >
-                    <Icon style={{ fontSize: 19 }} />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={it.name}
-                    className={selected ? classes.textSelected : classes.text}
-                  />
-                  {open[it.name] ? (
-                    <ExpandLess style={{ color: '#8a8f99', fontSize: 18 }} />
-                  ) : (
-                    <ExpandMore style={{ color: '#8a8f99', fontSize: 18 }} />
-                  )}
-                </StyledListItem>
-                <Collapse
-                  in={open[it.name] || isSelected(it.name.toLocaleLowerCase())}
-                  timeout="auto"
-                  unmountOnExit
-                >
-                  <List component="div" disablePadding>
-                    {it.items.map((ch) => (
-                      <StyledListItem
-                        button
-                        onClick={onClick(ch.route!)}
-                        selected={isSelected(ch.route!)}
-                        key={ch.name}
-                        className={classes.nestedItem}
-                        classes={{ selected: classes.selectedItem }}
-                      >
-                        <ListItemText
-                          primary={ch.name}
-                          className={
-                            isSelected(ch.route!)
-                              ? classes.textSelected
-                              : classes.text
-                          }
-                        />
-                      </StyledListItem>
-                    ))}
-                  </List>
-                </Collapse>
-              </Fragment>
-            );
-          }
+          const selected = isSelected(it.route!);
           return (
             <StyledListItem
               button
+              key={it.name}
               onClick={onClick(it.route!)}
               selected={selected}
-              key={it.name}
               className={classes.item}
               classes={{ selected: classes.selectedItem }}
             >
@@ -417,6 +340,28 @@ const NavMenu = (props: any) => {
       <Divider style={{ backgroundColor: 'rgba(0,0,0,0.06)' }} />
 
       <List className={classes.bottomList}>
+        {(() => {
+          const selected = isSelected(localRoutes.settings);
+          return (
+            <StyledListItem
+              button
+              onClick={onClick(localRoutes.settings)}
+              selected={selected}
+              className={classes.item}
+              classes={{ selected: classes.selectedItem }}
+            >
+              <ListItemIcon
+                className={selected ? classes.iconSelected : classes.icon}
+              >
+                <SettingsIcon style={{ fontSize: 19 }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="Settings"
+                className={selected ? classes.textSelected : classes.text}
+              />
+            </StyledListItem>
+          );
+        })()}
         <StyledListItem button onClick={doLogout} className={classes.item}>
           <ListItemIcon className={classes.icon}>
             <ExitToAppIcon style={{ fontSize: 19 }} />

@@ -75,6 +75,9 @@ const Hubs = React.lazy(() => import('./admin/hubs/Hubs'));
 const AdminAttendance = React.lazy(
   () => import('./admin/attendance/AdminAttendance'),
 );
+const AdminTimetable = React.lazy(
+  () => import('./admin/timetable/AdminTimetable'),
+);
 const CheckIn = React.lazy(() => import('./student/CheckIn'));
 const AttendanceCode = React.lazy(() => import('./student/AttendanceCode'));
 const MyAssessments = React.lazy(() => import('./student/MyAssessments'));
@@ -224,6 +227,7 @@ const ContentSwitch = () => {
         />
         <Route path={localRoutes.hubs} component={Hubs} />
         <Route path={localRoutes.attendance} component={AdminAttendance} />
+        <Route path={localRoutes.timetable} component={AdminTimetable} />
 
         <Route path={localRoutes.test} component={Testing} />
         <Route

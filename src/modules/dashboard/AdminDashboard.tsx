@@ -1,387 +1,252 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Avatar,
-  Box,
-  Card,
-  CardContent,
-  Chip,
-  Divider,
   Grid,
   LinearProgress,
-  makeStyles,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Theme,
   Typography,
+  makeStyles,
+  Theme,
 } from '@material-ui/core';
 import PeopleIcon from '@material-ui/icons/People';
 import HowToRegIcon from '@material-ui/icons/HowToReg';
 import EventIcon from '@material-ui/icons/Event';
-import AssignmentIcon from '@material-ui/icons/Assignment';
-import LocationOnIcon from '@material-ui/icons/LocationOn';
-import AccessTimeIcon from '@material-ui/icons/AccessTime';
+import SchoolIcon from '@material-ui/icons/School';
+import TrendingUpIcon from '@material-ui/icons/TrendingUp';
+import PersonAddIcon from '@material-ui/icons/PersonAdd';
 import StarIcon from '@material-ui/icons/Star';
+import LocationOnIcon from '@material-ui/icons/LocationOn';
 import { useHistory } from 'react-router-dom';
-import { localRoutes } from '../../data/constants';
 import { format } from 'date-fns';
 import { useSelector } from 'react-redux';
 import Layout from '../../components/layout/Layout';
 import { search } from '../../utils/ajax';
-import { remoteRoutes } from '../../data/constants';
+import { remoteRoutes, localRoutes } from '../../data/constants';
 import { IState } from '../../data/types';
+
+const CORAL = '#E72C6C';
+const ORANGE = '#fe8c45';
+const DARK = '#1f2025';
 
 const useStyles = makeStyles((theme: Theme) => ({
   root: {
-    padding: theme.spacing(3),
+    minHeight: '100%',
   },
-  pageHeader: {
-    marginBottom: theme.spacing(3),
-  },
-  greeting: {
-    fontSize: '22px',
-    fontWeight: 700,
-    color: '#1f2025',
-    fontFamily: '"Plus Jakarta Sans", sans-serif',
-  },
-  subtitle: {
-    fontSize: '14px',
-    color: '#8a8f99',
-    marginTop: 2,
-  },
-  statCard: {
-    borderRadius: 12,
-    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-    height: '100%',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  statCardContent: {
+
+  // ── Banner ────────────────────────────────────────────────────────────────
+  banner: {
+    background: `linear-gradient(120deg, ${CORAL} 0%, ${ORANGE} 100%)`,
+    borderRadius: 14,
+    padding: '24px 32px',
+    marginBottom: 24,
     display: 'flex',
-    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    padding: theme.spacing(2.5),
+    alignItems: 'center',
+    overflow: 'hidden',
+    position: 'relative' as any,
+    [theme.breakpoints.down('xs')]: { padding: '18px 20px' },
   },
-  statNumber: {
-    fontSize: '32px',
+  bannerTitle: {
+    fontSize: 20,
     fontWeight: 700,
-    color: '#1f2025',
-    fontFamily: '"Plus Jakarta Sans", sans-serif',
+    color: '#fff',
+    marginBottom: 4,
+    [theme.breakpoints.down('xs')]: { fontSize: 16 },
+  },
+  bannerSub: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  bannerDeco: {
+    position: 'absolute' as any,
+    right: 28,
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'rgba(255,255,255,0.12)',
+    borderRadius: 10,
+    padding: '10px 16px',
+    display: 'flex',
+    flexDirection: 'column' as any,
+    gap: 4,
+    [theme.breakpoints.down('sm')]: { display: 'none' },
+  },
+  decoLine: {
+    height: 8,
+    borderRadius: 4,
+    background: 'rgba(255,255,255,0.55)',
+  },
+
+  // ── Stat cards ────────────────────────────────────────────────────────────
+  statCard: {
+    background: '#fff',
+    borderRadius: 14,
+    border: '1px solid rgba(0,0,0,0.07)',
+    padding: '18px 20px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 16,
+    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+    height: '100%',
+  },
+  statIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    background: 'rgba(231,44,108,0.08)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  statNum: {
+    fontSize: 26,
+    fontWeight: 800,
+    color: DARK,
     lineHeight: 1,
   },
   statLabel: {
-    fontSize: '13px',
-    color: '#8a8f99',
-    marginTop: 6,
+    fontSize: 12,
+    color: '#9ca3af',
+    marginTop: 4,
     fontWeight: 500,
   },
   statTrend: {
-    fontSize: '12px',
-    color: '#22c55e',
-    marginTop: 4,
-    fontWeight: 600,
-  },
-  statAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-  },
-  statAccent: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    background: 'linear-gradient(90deg, #fe3a6a 0%, #fe8c45 100%)',
-  },
-  sectionTitle: {
-    fontSize: '16px',
+    fontSize: 11,
+    color: '#10b981',
     fontWeight: 700,
-    color: '#1f2025',
-    marginBottom: theme.spacing(2),
-    marginTop: theme.spacing(3),
-    fontFamily: '"Plus Jakarta Sans", sans-serif',
+    marginTop: 3,
   },
-  hubCard: {
-    borderRadius: 12,
-    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+
+  // ── Section title ─────────────────────────────────────────────────────────
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: DARK,
+    marginBottom: 14,
+    marginTop: 28,
+  },
+
+  // ── Generic card ─────────────────────────────────────────────────────────
+  card: {
+    background: '#fff',
+    borderRadius: 14,
+    border: '1px solid rgba(0,0,0,0.07)',
+    padding: '18px 22px',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
     height: '100%',
-    border: '1px solid #f0f0f0',
   },
-  hubHeader: {
+  cardTitle: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: '#9ca3af',
+    textTransform: 'uppercase' as any,
+    letterSpacing: '0.07em',
+    marginBottom: 16,
+  },
+
+  // ── Hub rows ──────────────────────────────────────────────────────────────
+  hubRow: {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
-    marginBottom: theme.spacing(1.5),
+    padding: '9px 0',
+    borderBottom: '1px solid #f3f4f6',
+    cursor: 'pointer',
+    '&:last-child': { borderBottom: 'none' },
+    '&:hover': { opacity: 0.8 },
   },
   hubDot: {
-    width: 10,
-    height: 10,
+    width: 8,
+    height: 8,
     borderRadius: '50%',
     flexShrink: 0,
   },
-  hubName: {
-    fontWeight: 700,
-    fontSize: '14px',
-    color: '#1f2025',
+  hubName: { fontSize: 13, fontWeight: 600, color: DARK, flex: 1 },
+  hubCount: { fontSize: 13, fontWeight: 700, color: DARK },
+
+  // ── Course rows ───────────────────────────────────────────────────────────
+  courseRow: {
+    padding: '10px 0',
+    borderBottom: '1px solid #f3f4f6',
+    '&:last-child': { borderBottom: 'none' },
   },
-  hubStudentCount: {
-    fontSize: '12px',
-    color: '#8a8f99',
-    marginLeft: 'auto',
-  },
-  classItem: {
+  courseRowTop: {
     display: 'flex',
-    alignItems: 'flex-start',
-    gap: 10,
-    padding: '8px 0',
-    borderBottom: '1px solid #f5f5f5',
-    '&:last-child': {
-      borderBottom: 'none',
-      paddingBottom: 0,
-    },
+    justifyContent: 'space-between',
+    marginBottom: 6,
   },
-  classTime: {
-    fontSize: '11px',
-    fontWeight: 600,
-    color: '#8a8f99',
-    minWidth: 70,
-    paddingTop: 2,
-  },
-  classInfo: {
-    flex: 1,
-  },
-  className: {
-    fontSize: '13px',
-    fontWeight: 600,
-    color: '#1f2025',
-  },
-  classInstructor: {
-    fontSize: '12px',
-    color: '#8a8f99',
-    marginTop: 1,
-  },
-  courseChip: {
-    height: 22,
-    fontSize: '11px',
-    fontWeight: 600,
-    borderRadius: 6,
-  },
-  emptyState: {
-    textAlign: 'center',
-    padding: theme.spacing(2),
-    color: '#8a8f99',
-    fontSize: '13px',
-  },
-  tableCard: {
-    borderRadius: 12,
-    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-    border: '1px solid #f0f0f0',
-    overflow: 'hidden',
-  },
-  tableHead: {
-    backgroundColor: '#f8f9fa',
-  },
-  tableHeadCell: {
-    fontWeight: 700,
-    fontSize: '12px',
-    color: '#8a8f99',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    padding: '10px 16px',
-    borderBottom: '1px solid #f0f0f0',
-  },
-  tableCell: {
-    fontSize: '13px',
-    color: '#1f2025',
-    padding: '12px 16px',
-    borderBottom: '1px solid #f8f8f8',
-  },
-  hubBadge: {
-    display: 'inline-block',
-    padding: '2px 10px',
-    borderRadius: 20,
-    fontSize: '11px',
-    fontWeight: 700,
-    color: '#fff',
-  },
-  progressBar: {
-    height: 6,
+  courseName: { fontSize: 13, fontWeight: 600, color: DARK },
+  courseCount: { fontSize: 12, fontWeight: 700, color: CORAL },
+  progressBar: { height: 5, borderRadius: 3, backgroundColor: '#f3f4f6' },
+  progressFill: {
+    background: `linear-gradient(90deg, ${CORAL} 0%, ${ORANGE} 100%)`,
     borderRadius: 3,
-    backgroundColor: '#f0f0f0',
   },
-  progressBarFill: {
-    background: 'linear-gradient(90deg, #fe3a6a 0%, #fe8c45 100%)',
-    borderRadius: 3,
+
+  // ── Top performer ─────────────────────────────────────────────────────────
+  performerCard: {
+    background: '#fff',
+    borderRadius: 14,
+    border: '1px solid rgba(0,0,0,0.07)',
+    padding: '18px 22px',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+  },
+  performerLabel: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: '#9ca3af',
+    textTransform: 'uppercase' as any,
+    letterSpacing: '0.07em',
+    marginBottom: 16,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+  },
+  performerName: {
+    fontSize: 16,
+    fontWeight: 800,
+    color: DARK,
+    marginBottom: 6,
+  },
+  performerMeta: { fontSize: 12, color: '#9ca3af', marginBottom: 4 },
+
+  emptyText: {
+    fontSize: 13,
+    color: '#c0c4ce',
+    textAlign: 'center' as any,
+    padding: '20px 0',
   },
 }));
 
-// Hub colour map
-const HUB_COLORS: Record<string, string> = {
-  Katanga: '#fe3a6a',
-  Kosovo: '#6366f1',
-  Jinja: '#f59e0b',
-  Namayemba: '#10b981',
-  Lyantode: '#3b82f6',
-};
-
-// Course colour map
-const COURSE_COLORS: Record<string, string> = {
-  'Graphic Design': '#8b5cf6',
-  'Website Development': '#3b82f6',
-  'Film & Photography': '#f59e0b',
-  'ALX Course': '#10b981',
-  'Video Production': '#fe3a6a',
-  'UI/UX Design': '#ec4899',
-};
-
-// ─── SERVER ENDPOINT SPECIFICATION ─────────────────────────────────────────
-// GET /api/dashboard/stats
-//   Response: { totalStudents, newThisWeek, todayClasses, pendingExams }
-//
-// GET /api/dashboard/hub-stats
-//   Response: [{ hub, studentCount, activeCount }]  — one entry per hub
-//
-// GET /api/dashboard/top-performers
-//   Response: { topStudent: { name, hub, course, score }, topCourse: { name, enrolledCount, avgScore } }
-// ────────────────────────────────────────────────────────────────────────────
-
-// Fallback data shown while server is not yet connected
-const FALLBACK_STATS = {
-  totalStudents: 0,
-  newThisWeek: 0,
-  todayClasses: 0,
-  pendingExams: 0,
-  todayAttendance: 0,
-};
-
-const FALLBACK_HUBS = [
-  {
-    name: 'Katanga',
-    studentCount: 0,
-    todayClasses: [
-      {
-        time: '9:00 AM',
-        course: 'Website Development',
-        instructor: 'TBA',
-        enrolled: 0,
-      },
-      {
-        time: '2:00 PM',
-        course: 'Graphic Design',
-        instructor: 'TBA',
-        enrolled: 0,
-      },
-    ],
-  },
-  {
-    name: 'Kosovo',
-    studentCount: 0,
-    todayClasses: [
-      {
-        time: '10:00 AM',
-        course: 'Film & Photography',
-        instructor: 'TBA',
-        enrolled: 0,
-      },
-    ],
-  },
-  {
-    name: 'Jinja',
-    studentCount: 0,
-    todayClasses: [
-      { time: '9:00 AM', course: 'ALX Course', instructor: 'TBA', enrolled: 0 },
-    ],
-  },
-  {
-    name: 'Namayemba',
-    studentCount: 0,
-    todayClasses: [],
-  },
-  {
-    name: 'Lyantode',
-    studentCount: 0,
-    todayClasses: [
-      {
-        time: '11:00 AM',
-        course: 'Graphic Design',
-        instructor: 'TBA',
-        enrolled: 0,
-      },
-    ],
-  },
+const HUB_COLORS = [
+  '#E72C6C',
+  '#6366f1',
+  '#f59e0b',
+  '#10b981',
+  '#3b82f6',
+  '#8b5cf6',
 ];
-
-const COURSE_ENROLLMENT_FALLBACK = [
-  { course: 'Website Development', enrolled: 0, capacity: 30, hub: 'Multiple' },
-  { course: 'Graphic Design', enrolled: 0, capacity: 25, hub: 'Multiple' },
-  {
-    course: 'Film & Photography',
-    enrolled: 0,
-    capacity: 20,
-    hub: 'Kosovo / Jinja',
-  },
-  { course: 'ALX Course', enrolled: 0, capacity: 40, hub: 'Jinja / Namayemba' },
-];
-
-const StatCard = ({
-  label,
-  value,
-  icon: Icon,
-  color,
-  trend,
-}: {
-  label: string;
-  value: number | string;
-  icon: any;
-  color: string;
-  trend?: string;
-}) => {
-  const classes = useStyles();
-  return (
-    <Card className={classes.statCard}>
-      <div className={classes.statCardContent}>
-        <div>
-          <div className={classes.statNumber}>{value}</div>
-          <div className={classes.statLabel}>{label}</div>
-          {trend && <div className={classes.statTrend}>{trend}</div>}
-        </div>
-        <Avatar className={classes.statAvatar} style={{ background: color }}>
-          <Icon style={{ fontSize: 22, color: '#fff' }} />
-        </Avatar>
-      </div>
-      <div className={classes.statAccent} />
-    </Card>
-  );
-};
 
 const AdminDashboard = () => {
   const classes = useStyles();
+  const history = useHistory();
   const user = useSelector((state: IState) => state.core.user);
   const todayLabel = format(new Date(), 'EEEE, MMMM d');
+  const firstName = user?.fullName?.split(' ')[0] || user?.username || 'Admin';
 
-  const [stats, setStats] = useState(FALLBACK_STATS);
-  const [hubs, setHubs] = useState(FALLBACK_HUBS);
-  const [courseEnrollments] = useState(COURSE_ENROLLMENT_FALLBACK);
-  const [hubStudentCounts, setHubStudentCounts] = useState<
-    Record<string, number>
-  >({});
-  const [topPerformer, setTopPerformer] = useState<{
-    name: string;
-    hub: string;
-    course: string;
-    score: number;
-  } | null>(null);
-  const [topCourse, setTopCourse] = useState<{
-    name: string;
-    enrolledCount: number;
-    avgScore: number;
-  } | null>(null);
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    newThisWeek: 0,
+    todayClasses: 0,
+    totalCourses: 0,
+    activeEnrollments: 0,
+    todayAttendance: 0,
+  });
+  const [hubStats, setHubStats] = useState<any[]>([]);
+  const [courseEnrollments, setCourseEnrollments] = useState<any[]>([]);
+  const [topStudent, setTopStudent] = useState<any>(null);
+  const [topCourse, setTopCourse] = useState<any>(null);
 
   useEffect(() => {
-    // GET /api/dashboard/stats → { totalStudents, newThisWeek, todayClasses, pendingExams }
+    // Overall stats
     search(
       remoteRoutes.dashboardStats,
       {},
@@ -392,40 +257,30 @@ const AdminDashboard = () => {
       undefined,
     );
 
-    // Fallback: count students directly if dashboardStats not available
-    search(
-      remoteRoutes.contacts,
-      { limit: 1 },
-      (data: any) => {
-        const total = data?.total ?? data?.totalCount;
-        const week = data?.weekCount ?? data?.newThisWeek;
-        if (total !== undefined)
-          setStats((s) => ({ ...s, totalStudents: total }));
-        if (week !== undefined) setStats((s) => ({ ...s, newThisWeek: week }));
-      },
-      undefined,
-      undefined,
-    );
-
-    // GET /api/dashboard/hub-stats → [{ hub, studentCount }]
+    // Hub breakdown
     search(
       remoteRoutes.hubStats,
       {},
       (data: any[]) => {
-        if (Array.isArray(data)) {
-          const counts: Record<string, number> = {};
-          data.forEach((row: any) => {
-            counts[row.hub] = row.studentCount || 0;
+        if (Array.isArray(data)) setHubStats(data);
+      },
+      undefined,
+      undefined,
+    );
+
+    // Report stats — enrollment by course (dedupe by course name, sum counts)
+    search(
+      remoteRoutes.dashboardReportStats,
+      {},
+      (data: any) => {
+        if (data?.enrollmentsByCourse) {
+          const map: Record<string, number> = {};
+          data.enrollmentsByCourse.forEach((c: any) => {
+            const name = c.course || c.name || 'Unknown';
+            map[name] = (map[name] || 0) + (c.count || 0);
           });
-          setHubStudentCounts(counts);
-          setHubs((prev) =>
-            prev.map((h) => ({
-              ...h,
-              studentCount:
-                counts[h.name] ??
-                counts[h.name.toLowerCase()] ??
-                h.studentCount,
-            })),
+          setCourseEnrollments(
+            Object.entries(map).map(([course, count]) => ({ course, count })),
           );
         }
       },
@@ -433,701 +288,321 @@ const AdminDashboard = () => {
       undefined,
     );
 
-    // GET /api/dashboard/top-performers → { topStudent, topCourse }
+    // Top performers
     search(
       `${remoteRoutes.dashboardStats}/top-performers`,
       {},
       (data: any) => {
-        if (data?.topStudent) setTopPerformer(data.topStudent);
+        if (data?.topStudent) setTopStudent(data.topStudent);
         if (data?.topCourse) setTopCourse(data.topCourse);
-      },
-      undefined,
-      undefined,
-    );
-
-    // Fetch today's classes for timetable
-    const today = format(new Date(), 'yyyy-MM-dd');
-    search(
-      remoteRoutes.events,
-      { from: today, to: today, limit: 100 },
-      (data: any[]) => {
-        if (Array.isArray(data)) {
-          setStats((s) => ({ ...s, todayClasses: data.length }));
-          const hubMap: Record<string, any[]> = {};
-          data.forEach((cls: any) => {
-            const hub = cls.hubName || 'Unknown';
-            if (!hubMap[hub]) hubMap[hub] = [];
-            hubMap[hub].push({
-              time: cls.startTime
-                ? format(new Date(cls.startTime), 'h:mm a')
-                : '',
-              course: cls.courseName || cls.name || 'Class',
-              instructor: cls.instructor || cls.instructorName || 'TBA',
-              enrolled: cls.attendance || 0,
-            });
-          });
-          setHubs((prev) =>
-            prev.map((h) => ({
-              ...h,
-              todayClasses: hubMap[h.name] || h.todayClasses,
-            })),
-          );
-        }
       },
       undefined,
       undefined,
     );
   }, []);
 
-  const history = useHistory();
-  const firstName = user?.fullName?.split(' ')[0] || user?.username || 'Admin';
+  const maxCourseEnroll = courseEnrollments.reduce(
+    (m, c) => Math.max(m, c.count || 0),
+    1,
+  );
 
   return (
     <Layout>
       <div className={classes.root}>
-        {/* Page header */}
-        <div className={classes.pageHeader}>
-          <div className={classes.greeting}>Good morning, {firstName}</div>
-          <div className={classes.subtitle}>
-            {todayLabel} — Here's what's happening across all hubs today
+        {/* Banner */}
+        <div className={classes.banner}>
+          <div>
+            <div className={classes.bannerTitle}>Good morning, {firstName}</div>
+            <div className={classes.bannerSub}>
+              {todayLabel} — Here's your academy overview
+            </div>
+          </div>
+          <div className={classes.bannerDeco}>
+            {[80, 55, 90, 45].map((w, i) => (
+              <div
+                key={i}
+                className={classes.decoLine}
+                style={{ width: w, opacity: 0.4 + i * 0.1 }}
+              />
+            ))}
           </div>
         </div>
 
-        {/* Stats row */}
+        {/* Stats */}
         <Grid container spacing={2}>
-          <Grid item xs={6} sm={3}>
-            <StatCard
-              label="Total Students"
-              value={stats.totalStudents}
-              icon={PeopleIcon}
-              color="#fe3a6a"
-            />
-          </Grid>
-          <Grid item xs={6} sm={3}>
-            <StatCard
-              label="Today's Attendance"
-              value={stats.todayAttendance}
-              icon={HowToRegIcon}
-              color="#6366f1"
-              trend={
-                stats.todayAttendance > 0
-                  ? `${stats.todayAttendance} checked in today`
-                  : undefined
-              }
-            />
-          </Grid>
-          <Grid item xs={6} sm={3}>
-            <StatCard
-              label="Classes Today"
-              value={stats.todayClasses}
-              icon={EventIcon}
-              color="#f59e0b"
-            />
-          </Grid>
-          <Grid item xs={6} sm={3}>
-            <StatCard
-              label="Pending Exams"
-              value={stats.pendingExams}
-              icon={AssignmentIcon}
-              color="#10b981"
-            />
-          </Grid>
-        </Grid>
-
-        {/* Hub Timetable */}
-        <Typography className={classes.sectionTitle}>
-          Today's Hub Timetable — {todayLabel}
-        </Typography>
-        <Grid container spacing={2}>
-          {hubs.map((hub) => (
-            <Grid item xs={12} sm={6} md={4} key={hub.name}>
-              <Card className={classes.hubCard}>
-                <CardContent>
-                  <div className={classes.hubHeader}>
-                    <div
-                      className={classes.hubDot}
-                      style={{ background: HUB_COLORS[hub.name] || '#8a8f99' }}
-                    />
-                    <span className={classes.hubName}>{hub.name} Hub</span>
-                    <span className={classes.hubStudentCount}>
-                      <LocationOnIcon
-                        style={{
-                          fontSize: 12,
-                          verticalAlign: 'middle',
-                          marginRight: 2,
-                        }}
-                      />
-                      {hub.studentCount} students
-                    </span>
-                  </div>
-                  <Divider style={{ marginBottom: 12 }} />
-                  {hub.todayClasses.length === 0 ? (
-                    <div className={classes.emptyState}>No classes today</div>
-                  ) : (
-                    hub.todayClasses.map((cls, i) => (
-                      <div className={classes.classItem} key={i}>
-                        <div className={classes.classTime}>
-                          <AccessTimeIcon
-                            style={{
-                              fontSize: 11,
-                              verticalAlign: 'middle',
-                              marginRight: 2,
-                            }}
-                          />
-                          {cls.time}
-                        </div>
-                        <div className={classes.classInfo}>
-                          <div className={classes.className}>
-                            <Chip
-                              label={cls.course}
-                              size="small"
-                              className={classes.courseChip}
-                              style={{
-                                backgroundColor: `${
-                                  COURSE_COLORS[cls.course] || '#6366f1'
-                                }18`,
-                                color: COURSE_COLORS[cls.course] || '#6366f1',
-                                border: `1px solid ${
-                                  COURSE_COLORS[cls.course] || '#6366f1'
-                                }30`,
-                              }}
-                            />
-                          </div>
-                          <div className={classes.classInstructor}>
-                            {cls.instructor}
-                            {cls.enrolled > 0 && ` · ${cls.enrolled} present`}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </CardContent>
-              </Card>
+          {[
+            {
+              label: 'Total Students',
+              value: stats.totalStudents,
+              Icon: PeopleIcon,
+            },
+            {
+              label: 'New This Week',
+              value: stats.newThisWeek,
+              Icon: PersonAddIcon,
+              trend:
+                stats.newThisWeek > 0
+                  ? `+${stats.newThisWeek} joined`
+                  : undefined,
+            },
+            {
+              label: 'Classes Today',
+              value: stats.todayClasses,
+              Icon: EventIcon,
+            },
+            {
+              label: "Today's Attendance",
+              value: stats.todayAttendance,
+              Icon: HowToRegIcon,
+            },
+            {
+              label: 'Total Courses',
+              value: stats.totalCourses,
+              Icon: SchoolIcon,
+            },
+            {
+              label: 'Active Enrollments',
+              value: stats.activeEnrollments,
+              Icon: TrendingUpIcon,
+            },
+          ].map(({ label, value, Icon, trend }: any) => (
+            <Grid item xs={6} sm={4} md={2} key={label}>
+              <div className={classes.statCard}>
+                <div className={classes.statIconWrap}>
+                  <Icon style={{ fontSize: 20, color: CORAL }} />
+                </div>
+                <div>
+                  <div className={classes.statNum}>{value}</div>
+                  <div className={classes.statLabel}>{label}</div>
+                  {trend && <div className={classes.statTrend}>{trend}</div>}
+                </div>
+              </div>
             </Grid>
           ))}
         </Grid>
 
-        {/* Course Enrollment Breakdown */}
-        <Typography className={classes.sectionTitle}>
-          Course Enrollment Overview
-        </Typography>
-        <Card className={classes.tableCard}>
-          <Table>
-            <TableHead className={classes.tableHead}>
-              <TableRow>
-                <TableCell className={classes.tableHeadCell}>Course</TableCell>
-                <TableCell className={classes.tableHeadCell}>Hub(s)</TableCell>
-                <TableCell className={classes.tableHeadCell}>
-                  Enrolled
-                </TableCell>
-                <TableCell
-                  className={classes.tableHeadCell}
-                  style={{ minWidth: 160 }}
-                >
-                  Fill Rate
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {courseEnrollments.map((row) => {
-                const pct =
-                  row.capacity > 0
-                    ? Math.round((row.enrolled / row.capacity) * 100)
-                    : 0;
-                return (
-                  <TableRow key={row.course} hover>
-                    <TableCell className={classes.tableCell}>
+        {/* Hub breakdown + Course enrollment */}
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={5}>
+            <div className={classes.sectionTitle}>Students by Hub</div>
+            <div className={classes.card}>
+              <div className={classes.cardTitle}>
+                <LocationOnIcon
+                  style={{
+                    fontSize: 12,
+                    verticalAlign: 'middle',
+                    marginRight: 4,
+                  }}
+                />
+                Hub Breakdown
+              </div>
+              {hubStats.length === 0 ? (
+                <Typography className={classes.emptyText}>
+                  Loading hub data…
+                </Typography>
+              ) : (
+                hubStats.map((h, i) => {
+                  const total =
+                    hubStats.reduce((s, x) => s + (x.studentCount || 0), 0) ||
+                    1;
+                  const pct = Math.round(((h.studentCount || 0) / total) * 100);
+                  return (
+                    <div
+                      key={h.hub || i}
+                      className={classes.hubRow}
+                      onClick={() =>
+                        history.push(
+                          `${localRoutes.students}?hub=${encodeURIComponent(
+                            h.hub || '',
+                          )}`,
+                        )
+                      }
+                    >
                       <div
+                        className={classes.hubDot}
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
+                          background: HUB_COLORS[i % HUB_COLORS.length],
+                        }}
+                      />
+                      <span className={classes.hubName}>
+                        {h.hub || h.hubName} Hub
+                      </span>
+                      <span className={classes.hubCount}>
+                        {h.studentCount || 0}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: '#c0c4ce',
+                          minWidth: 32,
+                          textAlign: 'right',
                         }}
                       >
-                        <div
-                          style={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: '50%',
-                            background: COURSE_COLORS[row.course] || '#8a8f99',
-                            flexShrink: 0,
-                          }}
-                        />
-                        <strong>{row.course}</strong>
-                      </div>
-                    </TableCell>
-                    <TableCell className={classes.tableCell}>
-                      <span style={{ color: '#8a8f99', fontSize: 12 }}>
-                        {row.hub}
+                        {pct}%
                       </span>
-                    </TableCell>
-                    <TableCell className={classes.tableCell}>
-                      <strong>{row.enrolled}</strong>
-                      <span style={{ color: '#8a8f99', fontSize: 12 }}>
-                        /{row.capacity}
-                      </span>
-                    </TableCell>
-                    <TableCell className={classes.tableCell}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
-                      >
-                        <LinearProgress
-                          variant="determinate"
-                          value={pct}
-                          className={classes.progressBar}
-                          style={{ flex: 1 }}
-                          classes={{ bar: classes.progressBarFill }}
-                        />
-                        <span
-                          style={{
-                            fontSize: 12,
-                            color: '#8a8f99',
-                            minWidth: 32,
-                          }}
-                        >
-                          {pct}%
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </Grid>
+
+          <Grid item xs={12} md={7}>
+            <div className={classes.sectionTitle}>Enrollment by Course</div>
+            <div className={classes.card}>
+              <div className={classes.cardTitle}>
+                <SchoolIcon
+                  style={{
+                    fontSize: 12,
+                    verticalAlign: 'middle',
+                    marginRight: 4,
+                  }}
+                />
+                Course Enrollment
+              </div>
+              {courseEnrollments.length === 0 ? (
+                <Typography className={classes.emptyText}>
+                  Loading course data…
+                </Typography>
+              ) : (
+                courseEnrollments.map((c, i) => {
+                  const pct =
+                    maxCourseEnroll > 0
+                      ? Math.round(((c.count || 0) / maxCourseEnroll) * 100)
+                      : 0;
+                  return (
+                    <div key={c.course || i} className={classes.courseRow}>
+                      <div className={classes.courseRowTop}>
+                        <span className={classes.courseName}>{c.course}</span>
+                        <span className={classes.courseCount}>
+                          {c.count || 0} enrolled
                         </span>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </Card>
+                      <LinearProgress
+                        variant="determinate"
+                        value={pct}
+                        className={classes.progressBar}
+                        classes={{ bar: classes.progressFill }}
+                      />
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </Grid>
+        </Grid>
 
-        {/* Daily Learning Activity */}
-        <Typography className={classes.sectionTitle}>
-          Daily Learning Activity by Hub
-        </Typography>
-        <Grid container spacing={2}>
-          {hubs.map((hub) => {
-            const classesToday = hub.todayClasses.length;
-            const totalStudentsInHub = hub.studentCount;
-            return (
-              <Grid
-                item
-                xs={12}
-                sm={6}
-                md={4}
-                lg={2}
-                key={`activity-${hub.name}`}
-              >
-                <Card
-                  style={{
-                    borderRadius: 12,
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                    border: '1px solid #f0f0f0',
-                  }}
-                >
-                  <CardContent style={{ padding: 16 }}>
+        {/* Top performers */}
+        <div
+          style={{
+            marginTop: 48,
+            borderTop: '1px solid rgba(0,0,0,0.06)',
+            paddingTop: 32,
+          }}
+        >
+          <div className={classes.sectionTitle}>Top Performers</div>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <div className={classes.performerCard}>
+                <div className={classes.performerLabel}>
+                  <StarIcon style={{ fontSize: 13, color: '#f59e0b' }} /> Best
+                  Student This Term
+                </div>
+                {topStudent ? (
+                  <>
+                    <div className={classes.performerName}>
+                      {topStudent.name}
+                    </div>
+                    <div className={classes.performerMeta}>
+                      {topStudent.hub} Hub · {topStudent.course}
+                    </div>
                     <div
                       style={{
+                        marginTop: 12,
                         display: 'flex',
                         alignItems: 'center',
                         gap: 8,
-                        marginBottom: 12,
                       }}
                     >
-                      <div
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: 8,
-                          background: HUB_COLORS[hub.name] || '#8a8f99',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <LocationOnIcon
-                          style={{ fontSize: 16, color: '#fff' }}
-                        />
-                      </div>
-                      <div>
-                        <div
-                          style={{
-                            fontWeight: 700,
-                            fontSize: 13,
-                            color: '#1f2025',
-                          }}
-                        >
-                          {hub.name}
-                        </div>
-                        <div style={{ fontSize: 11, color: '#8a8f99' }}>
-                          Hub
-                        </div>
-                      </div>
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        marginBottom: 8,
-                      }}
-                    >
-                      <div style={{ textAlign: 'center' }}>
-                        <div
-                          style={{
-                            fontSize: 22,
-                            fontWeight: 700,
-                            color: '#1f2025',
-                            lineHeight: 1,
-                          }}
-                        >
-                          {classesToday}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: '#8a8f99',
-                            marginTop: 2,
-                          }}
-                        >
-                          Classes today
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div
-                          style={{
-                            fontSize: 22,
-                            fontWeight: 700,
-                            color: '#1f2025',
-                            lineHeight: 1,
-                          }}
-                        >
-                          {totalStudentsInHub}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: '#8a8f99',
-                            marginTop: 2,
-                          }}
-                        >
-                          Students
-                        </div>
-                      </div>
-                    </div>
-                    <LinearProgress
-                      variant="determinate"
-                      value={classesToday > 0 ? 100 : 0}
-                      style={{
-                        height: 4,
-                        borderRadius: 2,
-                        backgroundColor: '#f0f0f0',
-                      }}
-                      classes={{ bar: classes.progressBarFill }}
-                    />
-                  </CardContent>
-                </Card>
-              </Grid>
-            );
-          })}
-        </Grid>
-
-        {/* Students by Hub */}
-        <Typography className={classes.sectionTitle}>
-          Students by Hub
-        </Typography>
-        <Grid container spacing={2}>
-          {hubs.map((hub) => {
-            const total = stats.totalStudents || 1;
-            const count =
-              hubStudentCounts[hub.name] ??
-              hubStudentCounts[hub.name.toLowerCase()] ??
-              hub.studentCount;
-            const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-            return (
-              <Grid item xs={12} sm={6} md={4} key={`hub-students-${hub.name}`}>
-                <Card
-                  style={{
-                    borderRadius: 12,
-                    border: '1px solid #f0f0f0',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                    padding: 16,
-                    cursor: 'pointer',
-                  }}
-                  onClick={() =>
-                    history.push(
-                      `${localRoutes.students}?hub=${hub.name.toLowerCase()}`,
-                    )
-                  }
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginBottom: 12,
-                    }}
-                  >
-                    <div
-                      style={{ display: 'flex', alignItems: 'center', gap: 10 }}
-                    >
-                      <div
-                        style={{
-                          width: 10,
-                          height: 10,
-                          borderRadius: '50%',
-                          background: HUB_COLORS[hub.name] || '#8a8f99',
-                          flexShrink: 0,
-                        }}
+                      <LinearProgress
+                        variant="determinate"
+                        value={topStudent.score || 0}
+                        className={classes.progressBar}
+                        style={{ flex: 1 }}
+                        classes={{ bar: classes.progressFill }}
                       />
                       <span
                         style={{
-                          fontWeight: 700,
-                          fontSize: 14,
-                          color: '#1f2025',
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: CORAL,
+                          minWidth: 38,
                         }}
                       >
-                        {hub.name} Hub
+                        {topStudent.score}%
                       </span>
                     </div>
-                    <span
-                      style={{
-                        fontWeight: 700,
-                        fontSize: 20,
-                        color: '#1f2025',
-                        fontFamily: '"Plus Jakarta Sans", sans-serif',
-                      }}
-                    >
-                      {count}
-                    </span>
-                  </div>
-                  <div
-                    style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-                  >
-                    <LinearProgress
-                      variant="determinate"
-                      value={pct}
-                      style={{
-                        flex: 1,
-                        height: 6,
-                        borderRadius: 3,
-                        backgroundColor: `${
-                          HUB_COLORS[hub.name] || '#8a8f99'
-                        }20`,
-                      }}
-                      classes={{ bar: classes.progressBarFill }}
-                    />
-                    <span
-                      style={{ fontSize: 12, color: '#8a8f99', minWidth: 36 }}
-                    >
-                      {pct}%
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 11, color: '#c0c4ce', marginTop: 6 }}>
-                    Click to view students →
-                  </div>
-                </Card>
-              </Grid>
-            );
-          })}
-        </Grid>
-
-        {/* Top Performers */}
-        <Typography className={classes.sectionTitle}>Top Performers</Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <Card
-              style={{
-                borderRadius: 12,
-                border: '1px solid #f0f0f0',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                padding: 20,
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  marginBottom: 12,
-                }}
-              >
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 10,
-                    background: '#fef3c7',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <StarIcon style={{ color: '#f59e0b', fontSize: 20 }} />
-                </div>
-                <div>
-                  <div
-                    style={{ fontWeight: 700, fontSize: 13, color: '#1f2025' }}
-                  >
-                    Best Student
-                  </div>
-                  <div style={{ fontSize: 11, color: '#8a8f99' }}>
-                    Highest overall score this term
-                  </div>
-                </div>
+                  </>
+                ) : (
+                  <Typography className={classes.emptyText}>
+                    Available once exam results are submitted
+                  </Typography>
+                )}
               </div>
-              {topPerformer ? (
-                <div>
-                  <div
-                    style={{ fontWeight: 700, fontSize: 16, color: '#1f2025' }}
-                  >
-                    {topPerformer.name}
-                  </div>
-                  <div style={{ fontSize: 12, color: '#8a8f99', marginTop: 3 }}>
-                    {topPerformer.hub} Hub &middot; {topPerformer.course}
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 10,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                    }}
-                  >
-                    <LinearProgress
-                      variant="determinate"
-                      value={topPerformer.score}
-                      style={{
-                        flex: 1,
-                        height: 8,
-                        borderRadius: 4,
-                        backgroundColor: '#f0f0f0',
-                      }}
-                      classes={{ bar: classes.progressBarFill }}
-                    />
-                    <span
-                      style={{
-                        fontWeight: 700,
-                        fontSize: 14,
-                        color: '#fe3a6a',
-                        minWidth: 40,
-                      }}
-                    >
-                      {topPerformer.score}%
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  style={{
-                    color: '#c0c4ce',
-                    fontSize: 13,
-                    textAlign: 'center',
-                    padding: '12px 0',
-                  }}
-                >
-                  Available once exam results are submitted
-                </div>
-              )}
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Card
-              style={{
-                borderRadius: 12,
-                border: '1px solid #f0f0f0',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                padding: 20,
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  marginBottom: 12,
-                }}
-              >
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 10,
-                    background: '#f0fdf4',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <StarIcon style={{ color: '#22c55e', fontSize: 20 }} />
-                </div>
-                <div>
-                  <div
-                    style={{ fontWeight: 700, fontSize: 13, color: '#1f2025' }}
-                  >
-                    Best Performing Course
-                  </div>
-                  <div style={{ fontSize: 11, color: '#8a8f99' }}>
-                    Highest average score across all hubs
-                  </div>
-                </div>
-              </div>
-              {topCourse ? (
-                <div>
-                  <div
-                    style={{ fontWeight: 700, fontSize: 16, color: '#1f2025' }}
-                  >
-                    {topCourse.name}
-                  </div>
-                  <div style={{ fontSize: 12, color: '#8a8f99', marginTop: 3 }}>
-                    {topCourse.enrolledCount} students enrolled
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 10,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                    }}
-                  >
-                    <LinearProgress
-                      variant="determinate"
-                      value={topCourse.avgScore}
-                      style={{
-                        flex: 1,
-                        height: 8,
-                        borderRadius: 4,
-                        backgroundColor: '#f0f0f0',
-                      }}
-                      classes={{ bar: classes.progressBarFill }}
-                    />
-                    <span
-                      style={{
-                        fontWeight: 700,
-                        fontSize: 14,
-                        color: '#22c55e',
-                        minWidth: 40,
-                      }}
-                    >
-                      {topCourse.avgScore}%
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  style={{
-                    color: '#c0c4ce',
-                    fontSize: 13,
-                    textAlign: 'center',
-                    padding: '12px 0',
-                  }}
-                >
-                  Available once exam results are submitted
-                </div>
-              )}
-            </Card>
-          </Grid>
-        </Grid>
+            </Grid>
 
-        <Box style={{ marginBottom: 24 }} />
+            <Grid item xs={12} sm={6}>
+              <div className={classes.performerCard}>
+                <div className={classes.performerLabel}>
+                  <StarIcon style={{ fontSize: 13, color: '#10b981' }} /> Best
+                  Performing Course
+                </div>
+                {topCourse ? (
+                  <>
+                    <div className={classes.performerName}>
+                      {topCourse.name}
+                    </div>
+                    <div className={classes.performerMeta}>
+                      {topCourse.enrolledCount} students enrolled
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 12,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      <LinearProgress
+                        variant="determinate"
+                        value={topCourse.avgScore || 0}
+                        className={classes.progressBar}
+                        style={{ flex: 1 }}
+                        classes={{ bar: classes.progressFill }}
+                      />
+                      <span
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: '#10b981',
+                          minWidth: 38,
+                        }}
+                      >
+                        {topCourse.avgScore}%
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <Typography className={classes.emptyText}>
+                    Available once exam results are submitted
+                  </Typography>
+                )}
+              </div>
+            </Grid>
+          </Grid>
+        </div>
+
+        <div style={{ height: 32 }} />
       </div>
     </Layout>
   );

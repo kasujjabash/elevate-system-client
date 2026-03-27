@@ -6,15 +6,17 @@ import Hidden from '@material-ui/core/Hidden';
 import IconButton from '@material-ui/core/IconButton';
 import MenuIcon from '@material-ui/icons/Menu';
 import NotificationsNoneIcon from '@material-ui/icons/NotificationsNone';
+import HowToRegIcon from '@material-ui/icons/HowToReg';
 import Toolbar from '@material-ui/core/Toolbar';
-import Paper from '@material-ui/core/Paper';
 import { Typography } from '@material-ui/core';
 import { BarView } from '../Profile';
 import { useStyles } from './styles';
 import NavMenu from './NavMenu';
 import { useSelector } from 'react-redux';
+import { useHistory } from 'react-router-dom';
 import { IState } from '../../data/types';
 import { isStudent } from '../../data/appRoles';
+import { localRoutes } from '../../data/constants';
 
 interface IProps {
   title?: string;
@@ -27,6 +29,7 @@ function Layout(props: IProps) {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const user = useSelector((state: IState) => state.core.user);
   const student = isStudent(user);
+  const history = useHistory();
 
   function handleDrawerToggle() {
     setMobileOpen(!mobileOpen);
@@ -70,12 +73,21 @@ function Layout(props: IProps) {
             </Typography>
           )}
 
-          {student && (
+          {student ? (
             <IconButton
               size="small"
               style={{ color: '#8a8f99', marginRight: 4 }}
             >
               <NotificationsNoneIcon style={{ fontSize: 22 }} />
+            </IconButton>
+          ) : (
+            <IconButton
+              size="small"
+              style={{ color: '#8a8f99', marginRight: 4 }}
+              onClick={() => history.push(localRoutes.attendance)}
+              title="Attendance"
+            >
+              <HowToRegIcon style={{ fontSize: 22 }} />
             </IconButton>
           )}
 
@@ -107,7 +119,7 @@ function Layout(props: IProps) {
       </nav>
       <main className={classes.content}>
         <div className={classes.toolbar} />
-        <Paper className={classes.body}>{props.children}</Paper>
+        <div className={classes.body}>{props.children}</div>
       </main>
     </div>
   );

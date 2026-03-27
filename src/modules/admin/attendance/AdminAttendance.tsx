@@ -26,6 +26,13 @@ import XBreadCrumbs from '../../../components/XBreadCrumbs';
 import XTable from '../../../components/table/XTable';
 import { XHeadCell } from '../../../components/table/XTableHead';
 import { localRoutes, remoteRoutes, apiBaseUrl } from '../../../data/constants';
+import PersonIcon from '@material-ui/icons/Person';
+import Table from '@material-ui/core/Table';
+import TableHead from '@material-ui/core/TableHead';
+import TableBody from '@material-ui/core/TableBody';
+import TableRow from '@material-ui/core/TableRow';
+import TableCell from '@material-ui/core/TableCell';
+import Autocomplete from '@material-ui/lab/Autocomplete';
 import Toast from '../../../utils/Toast';
 
 const TOKEN_KEY = '__elevate__academy__token';
@@ -160,6 +167,12 @@ const AdminAttendance: React.FC = () => {
   const [codeFilter, setCodeFilter] = useState('');
   const [courseFilter, setCourseFilter] = useState('');
 
+  // Student attendance history
+  const [students, setStudents] = useState<any[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [studentHistory, setStudentHistory] = useState<any[]>([]);
+  const [studentHistoryLoading, setStudentHistoryLoading] = useState(false);
+
   const fetchSessions = async () => {
     try {
       const res = await fetch(
@@ -197,10 +210,37 @@ const AdminAttendance: React.FC = () => {
     } catch {}
   };
 
+  const fetchStudents = async () => {
+    try {
+      const res = await fetch(`${remoteRoutes.studentsPeopleCombo}`, {
+        headers: authHeader(),
+      });
+      const data = await res.json();
+      setStudents(Array.isArray(data) ? data : data.data ?? []);
+    } catch {}
+  };
+
+  const fetchStudentHistory = async (contactId: string) => {
+    setStudentHistoryLoading(true);
+    try {
+      const res = await fetch(
+        `${remoteRoutes.studentAttendanceHistory}?contactId=${contactId}`,
+        { headers: authHeader() },
+      );
+      const data = await res.json();
+      setStudentHistory(Array.isArray(data) ? data : data.records ?? []);
+    } catch {
+      Toast.error('Failed to load student attendance');
+    } finally {
+      setStudentHistoryLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchSessions();
     fetchCourses();
     fetchHubs();
+    fetchStudents();
   }, []);
 
   // Poll live session every 5s
@@ -747,6 +787,210 @@ const AdminAttendance: React.FC = () => {
             />
           );
         })()}
+      </Box>
+
+      {/* ── Student Attendance History ─────────────────────────── */}
+      <Box mt={4}>
+        <Box display="flex" alignItems="center" mb={2} style={{ gap: 8 }}>
+          <PersonIcon style={{ color: '#fe3a6a', fontSize: 20 }} />
+          <Typography
+            style={{ fontWeight: 700, fontSize: 15, color: '#374151' }}
+          >
+            Student Attendance History
+          </Typography>
+        </Box>
+
+        <Paper
+          style={{
+            padding: '12px 16px',
+            borderRadius: 10,
+            marginBottom: 16,
+            boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
+          }}
+        >
+          <Autocomplete
+            options={students}
+            getOptionLabel={(s: any) =>
+              s.name ||
+              `${s.firstName || ''} ${s.lastName || ''}`.trim() ||
+              s.label ||
+              ''
+            }
+            value={selectedStudent}
+            onChange={(_e, val) => {
+              setSelectedStudent(val);
+              if (val) {
+                const contactId = val.contactId || val.id || val.value;
+                fetchStudentHistory(contactId);
+              } else {
+                setStudentHistory([]);
+              }
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                variant="outlined"
+                size="small"
+                placeholder="Search student by name…"
+                fullWidth
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <>
+                      <InputAdornment position="start">
+                        <SearchIcon
+                          style={{ fontSize: 18, color: '#9ca3af' }}
+                        />
+                      </InputAdornment>
+                      {params.InputProps.startAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
+          />
+        </Paper>
+
+        {selectedStudent &&
+          (studentHistoryLoading ? (
+            <Typography
+              style={{ color: '#9ca3af', fontSize: 13, padding: '12px 0' }}
+            >
+              Loading attendance…
+            </Typography>
+          ) : studentHistory.length === 0 ? (
+            <Paper
+              style={{
+                padding: '24px',
+                borderRadius: 10,
+                textAlign: 'center',
+                boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
+              }}
+            >
+              <Typography style={{ color: '#9ca3af', fontSize: 13 }}>
+                No attendance records found for this student.
+              </Typography>
+            </Paper>
+          ) : (
+            <Paper
+              style={{
+                borderRadius: 10,
+                overflow: 'hidden',
+                boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
+              }}
+            >
+              <Table size="small">
+                <TableHead>
+                  <TableRow style={{ background: '#f8f9fa' }}>
+                    <TableCell
+                      style={{
+                        fontWeight: 700,
+                        fontSize: 12,
+                        color: '#8a8f99',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                      }}
+                    >
+                      Date
+                    </TableCell>
+                    <TableCell
+                      style={{
+                        fontWeight: 700,
+                        fontSize: 12,
+                        color: '#8a8f99',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                      }}
+                    >
+                      Session
+                    </TableCell>
+                    <TableCell
+                      style={{
+                        fontWeight: 700,
+                        fontSize: 12,
+                        color: '#8a8f99',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                      }}
+                    >
+                      Course
+                    </TableCell>
+                    <TableCell
+                      style={{
+                        fontWeight: 700,
+                        fontSize: 12,
+                        color: '#8a8f99',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                      }}
+                    >
+                      Checked In
+                    </TableCell>
+                    <TableCell
+                      style={{
+                        fontWeight: 700,
+                        fontSize: 12,
+                        color: '#8a8f99',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                      }}
+                    >
+                      Method
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {studentHistory.map((r: any, i: number) => (
+                    <TableRow key={r.sessionId || i} hover>
+                      <TableCell
+                        style={{
+                          fontSize: 13,
+                          color: '#374151',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {r.date ? fmtDate(r.date) : '—'}
+                      </TableCell>
+                      <TableCell
+                        style={{
+                          fontSize: 13,
+                          color: '#1f2025',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {r.sessionLabel || `Session #${r.sessionId}`}
+                      </TableCell>
+                      <TableCell style={{ fontSize: 13, color: '#374151' }}>
+                        {r.course?.title || '—'}
+                      </TableCell>
+                      <TableCell
+                        style={{
+                          fontSize: 12,
+                          color: '#6b7280',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {r.checkedInAt ? fmt(r.checkedInAt) : '—'}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={r.method || 'QR'}
+                          size="small"
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 600,
+                            background:
+                              r.method === 'CODE' ? '#fef3c7' : '#eff6ff',
+                            color: r.method === 'CODE' ? '#b45309' : '#1d4ed8',
+                          }}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Paper>
+          ))}
       </Box>
 
       {/* Create Session Dialog */}

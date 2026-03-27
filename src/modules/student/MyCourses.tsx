@@ -245,13 +245,13 @@ const MyCourses = () => {
 
   if (loading)
     return (
-      <Layout title="My Modules">
+      <Layout title="My Courses">
         <Loading />
       </Layout>
     );
 
   return (
-    <Layout title="My Modules">
+    <Layout title="My Courses">
       <div className={classes.root}>
         {/* Programme header */}
         {enrollments.length > 0 && (
@@ -272,20 +272,20 @@ const MyCourses = () => {
               </div>
               <div className={classes.metaBadge}>
                 <ViewModuleIcon style={{ fontSize: 13 }} />
-                {totalModules} module{totalModules !== 1 ? 's' : ''}
+                {totalModules} course{totalModules !== 1 ? 's' : ''}
               </div>
             </div>
             <div className={classes.programDesc}>
-              Your programme has {totalModules} module
-              {totalModules !== 1 ? 's' : ''}. Select the modules you'd like to
-              focus on this month.
+              Your programme has {totalModules} course
+              {totalModules !== 1 ? 's' : ''}. Each course contains modules and
+              lessons for you to work through.
             </div>
             <Button
               variant="contained"
               className={classes.chooseBtn}
               onClick={() => history.push(localRoutes.catalog)}
             >
-              Choose your Modules
+              Browse Course Catalog
             </Button>
           </div>
         )}
@@ -295,7 +295,7 @@ const MyCourses = () => {
           fullWidth
           variant="outlined"
           size="small"
-          placeholder="Search modules by name or code..."
+          placeholder="Search courses by name or code..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className={classes.searchBar}
@@ -320,7 +320,7 @@ const MyCourses = () => {
                 fontSize: 16,
               }}
             >
-              You haven't enrolled in any modules yet
+              You haven't enrolled in any courses yet
             </Typography>
             <Typography
               variant="body2"
@@ -350,7 +350,7 @@ const MyCourses = () => {
                   enrollment.title ||
                   enrollment.course?.title ||
                   enrollment.group?.name ||
-                  'Module';
+                  'Course';
                 const code =
                   enrollment.code ||
                   enrollment.courseCode ||

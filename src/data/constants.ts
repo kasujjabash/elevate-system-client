@@ -258,9 +258,16 @@ export const remoteRoutes = {
   attendanceSessions: `${apiBaseUrl}/api/attendance/sessions`,
   attendanceCheckin: `${apiBaseUrl}/api/attendance/checkin`,
   attendanceSession: `${apiBaseUrl}/api/attendance/session`,
+  // GET /api/attendance/student-summary?contactId=X&days=7
+  // Returns: [{ date: "2026-03-20", count: 1 }, ...] — one entry per day, last N days
+  studentAttendanceSummary: `${apiBaseUrl}/api/attendance/student-summary`,
+  // GET /api/attendance/student-history?contactId=X
+  // Returns: [{ sessionId, sessionLabel, date, checkedInAt, course: { title }, method }]
+  studentAttendanceHistory: `${apiBaseUrl}/api/attendance/student-history`,
 
   // Dashboard metrics
   dashboardStats: `${apiBaseUrl}/api/dashboard/stats`,
+  dashboardReportStats: `${apiBaseUrl}/api/dashboard/report-stats`,
   hubStats: `${apiBaseUrl}/api/dashboard/hub-stats`,
   timetable: `${apiBaseUrl}/api/timetable`,
 

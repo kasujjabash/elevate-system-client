@@ -1,52 +1,107 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, Grid, Typography } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
-import CheckIcon from '@material-ui/icons/Check';
+import { Button, Grid, Typography } from '@material-ui/core';
+import { makeStyles, Theme } from '@material-ui/core/styles';
 import EventIcon from '@material-ui/icons/Event';
-import { isToday, isPast, format, parseISO } from 'date-fns';
+import RoomIcon from '@material-ui/icons/Room';
+import AccessTimeIcon from '@material-ui/icons/AccessTime';
 import { useSelector } from 'react-redux';
+import { useHistory } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import Loading from '../../components/Loading';
-import { remoteRoutes } from '../../data/constants';
+import { localRoutes, remoteRoutes } from '../../data/constants';
 import { IState } from '../../data/types';
 import { search } from '../../utils/ajax';
 
 const CORAL = '#fe3a6a';
 const DARK = '#1f2025';
 
-const useStyles = makeStyles(() => ({
-  root: { padding: 24 },
+const DAY_NAMES = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// Parse "09:00" or "09:00 AM" → total minutes since midnight
+const toMinutes = (t: string): number => {
+  if (!t) return 0;
+  const ampm = t.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (ampm) {
+    let h = parseInt(ampm[1], 10);
+    const m = parseInt(ampm[2], 10);
+    if (ampm[3].toUpperCase() === 'PM' && h !== 12) h += 12;
+    if (ampm[3].toUpperCase() === 'AM' && h === 12) h = 0;
+    return h * 60 + m;
+  }
+  const h24 = t.match(/^(\d{1,2}):(\d{2})$/);
+  if (h24) return parseInt(h24[1], 10) * 60 + parseInt(h24[2], 10);
+  return 0;
+};
+
+const fmt12 = (t: string): string => {
+  if (!t) return '';
+  const mins = toMinutes(t);
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${suffix}`;
+};
+
+const getInitials = (name: string) => {
+  if (!name) return '??';
+  return name
+    .trim()
+    .split(' ')
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() || '')
+    .join('');
+};
+
+const useStyles = makeStyles((theme: Theme) => ({
+  root: { padding: 24, [theme.breakpoints.down('xs')]: { padding: 14 } },
   breadcrumb: { fontSize: 13, color: '#8a8f99', marginBottom: 6 },
   breadcrumbSep: { margin: '0 6px', color: '#c4c8d0' },
   breadcrumbActive: { color: CORAL },
-  pageTitle: { fontSize: 24, fontWeight: 700, color: DARK, marginBottom: 24 },
-  sectionTitle: {
-    fontSize: 16,
+  pageTitle: { fontSize: 22, fontWeight: 700, color: DARK, marginBottom: 24 },
+  sectionLabel: {
+    fontSize: 11,
     fontWeight: 700,
-    color: DARK,
-    marginBottom: 16,
+    color: '#8a8f99',
+    textTransform: 'uppercase' as any,
+    letterSpacing: '0.06em',
+    marginBottom: 14,
+    marginTop: 28,
   },
 
-  classCard: {
+  // ── Card ─────────────────────────────────────────────────────────────────
+  card: {
     background: '#fff',
-    borderRadius: 12,
+    borderRadius: 14,
     border: '1px solid rgba(0,0,0,0.08)',
     padding: 20,
     display: 'flex',
     flexDirection: 'column' as any,
     height: '100%',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+    transition: 'box-shadow 0.15s',
+    '&:hover': { boxShadow: '0 4px 16px rgba(0,0,0,0.09)' },
   },
   cardTop: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   avatar: {
     width: 44,
     height: 44,
     borderRadius: '50%',
-    background: CORAL,
+    background: `linear-gradient(135deg, ${CORAL} 0%, #fe8c45 100%)`,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -55,34 +110,55 @@ const useStyles = makeStyles(() => ({
     fontSize: 14,
     flexShrink: 0,
   },
-  cardRight: {
-    textAlign: 'right' as any,
-    display: 'flex',
-    flexDirection: 'column' as any,
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  liveBadge: {
+  livePill: {
     background: CORAL,
     color: '#fff',
-    borderRadius: 6,
-    padding: '2px 10px',
+    borderRadius: 20,
+    padding: '3px 10px',
+    fontSize: 11,
+    fontWeight: 700,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: '50%',
+    background: '#fff',
+    animation: '$pulse 1.2s ease-in-out infinite',
+  },
+  '@keyframes pulse': {
+    '0%,100%': { opacity: 1 },
+    '50%': { opacity: 0.3 },
+  },
+  upcomingPill: {
+    background: 'rgba(99,102,241,0.1)',
+    color: '#6366f1',
+    borderRadius: 20,
+    padding: '3px 10px',
     fontSize: 11,
     fontWeight: 700,
   },
-  moduleCode: { fontSize: 13, fontWeight: 700, color: DARK },
-  instructorName: { fontSize: 12, color: '#8a8f99', marginBottom: 10 },
-  detailRow: {
+  courseName: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: DARK,
+    lineHeight: 1.3,
+    marginBottom: 4,
+  },
+  instructorName: { fontSize: 12, color: '#8a8f99', marginBottom: 12 },
+  metaRow: {
     display: 'flex',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 6,
     fontSize: 12,
     color: '#5a5e6b',
-    marginBottom: 5,
+    marginBottom: 6,
   },
-  checkIcon: { fontSize: 14, color: CORAL, marginTop: 1, flexShrink: 0 },
-  ongoingBtn: {
-    background: CORAL,
+  metaIcon: { fontSize: 14, color: '#b0b5bf', flexShrink: 0 },
+  joinBtn: {
+    background: `linear-gradient(90deg, ${CORAL} 0%, #fe8c45 100%)`,
     color: '#fff',
     borderRadius: 8,
     fontWeight: 700,
@@ -91,10 +167,11 @@ const useStyles = makeStyles(() => ({
     marginTop: 'auto' as any,
     paddingTop: 10,
     paddingBottom: 10,
-    '&:hover': { background: '#e02d5c' },
+    boxShadow: 'none',
+    '&:hover': { opacity: 0.9, boxShadow: 'none' },
   },
-  attendBtn: {
-    border: `2px solid ${CORAL}`,
+  upcomingBtn: {
+    border: `1.5px solid ${CORAL}`,
     color: CORAL,
     borderRadius: 8,
     fontWeight: 700,
@@ -103,114 +180,113 @@ const useStyles = makeStyles(() => ({
     marginTop: 'auto' as any,
     paddingTop: 8,
     paddingBottom: 8,
-    '&:hover': { background: 'rgba(254,58,106,0.05)' },
+    background: 'transparent',
+    '&:hover': { background: 'rgba(254,58,106,0.04)' },
   },
 
+  // ── Timetable section ─────────────────────────────────────────────────
   timetableSection: {
     background: '#fff',
-    borderRadius: 12,
+    borderRadius: 14,
     border: '1px solid rgba(0,0,0,0.08)',
-    padding: 28,
+    padding: 24,
     marginTop: 32,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+    flexWrap: 'wrap' as any,
   },
   viewAllBtn: {
-    background: CORAL,
+    background: `linear-gradient(90deg, ${CORAL} 0%, #fe8c45 100%)`,
     color: '#fff',
     borderRadius: 8,
     fontWeight: 700,
     textTransform: 'none' as any,
     fontSize: 13,
-    marginTop: 16,
-    padding: '10px 28px',
-    '&:hover': { background: '#e02d5c' },
+    padding: '10px 24px',
+    boxShadow: 'none',
+    flexShrink: 0,
+    '&:hover': { opacity: 0.9, boxShadow: 'none' },
   },
 
   emptyBox: {
     textAlign: 'center' as any,
-    padding: '48px 0',
-    color: '#8a8f99',
+    padding: '48px 24px',
+    background: '#fff',
+    borderRadius: 14,
+    border: '1px solid rgba(0,0,0,0.07)',
   },
 }));
 
-const getInitials = (name: string) => {
-  if (!name) return 'AM';
-  const parts = name.trim().split(' ');
-  return parts
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() || '')
-    .join('');
-};
+interface TimetableSession {
+  id: number;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  courseName?: string;
+  moduleCode?: string;
+  room?: string;
+  instructorName?: string;
+  isLive?: boolean; // may be provided by backend
+  isToday?: boolean;
+}
 
-const getSessionDate = (session: any): Date | null => {
-  const raw = session.startDate || session.date || session.sessionDate;
-  if (!raw) return null;
-  try {
-    return typeof raw === 'string' ? parseISO(raw) : new Date(raw);
-  } catch {
-    return null;
-  }
-};
-
-const ClassCard = ({ session, index }: { session: any; index: number }) => {
+const ClassCard = ({
+  session,
+  status,
+}: {
+  session: TimetableSession;
+  status: 'live' | 'upcoming-today' | 'upcoming-week';
+}) => {
   const classes = useStyles();
-  const date = getSessionDate(session);
-  const ongoing = date ? isToday(date) : false;
-  const past = date ? isPast(date) : false;
-
-  const instructor =
-    session.instructorName ||
-    session.instructor?.name ||
-    session.tutor?.name ||
-    'Andrew Mukuye';
-  const initials = getInitials(instructor);
-  const code =
-    session.moduleCode ||
-    session.course?.code ||
-    session.group?.code ||
-    `1.${index + 1}`;
-  const title =
-    session.name || session.title || session.topic || 'Class Session';
-  const timeStr =
-    session.startTime && session.endTime
-      ? `${session.startTime} to ${session.endTime}`
-      : session.startTime || '08:00am to 11:00pm';
-  const dateStr = date
-    ? format(date, 'do MMMM yyyy')
-    : session.dateLabel || '26th March 2026';
-  const topic = session.topic || session.subject || title;
+  const instructor = session.instructorName || 'Instructor';
+  const dayLabel =
+    status === 'upcoming-week' ? DAY_NAMES[session.dayOfWeek] : 'Today';
 
   return (
-    <div className={classes.classCard}>
+    <div className={classes.card}>
       <div className={classes.cardTop}>
-        <div className={classes.avatar}>{initials}</div>
-        <div className={classes.cardRight}>
-          {ongoing && !past && <span className={classes.liveBadge}>Live</span>}
-          <span className={classes.moduleCode}>{code}</span>
-        </div>
+        <div className={classes.avatar}>{getInitials(instructor)}</div>
+        {status === 'live' ? (
+          <div className={classes.livePill}>
+            <div className={classes.liveDot} />
+            Live
+          </div>
+        ) : status === 'upcoming-today' ? (
+          <div className={classes.upcomingPill}>Today</div>
+        ) : (
+          <div className={classes.upcomingPill}>
+            {DAY_SHORT[session.dayOfWeek]}
+          </div>
+        )}
       </div>
 
+      <div className={classes.courseName}>{session.courseName || 'Class'}</div>
       <div className={classes.instructorName}>By {instructor}</div>
 
-      <div className={classes.detailRow}>
-        <CheckIcon className={classes.checkIcon} />
-        <span>Date: {dateStr}</span>
+      <div className={classes.metaRow}>
+        <AccessTimeIcon className={classes.metaIcon} />
+        {fmt12(session.startTime)} – {fmt12(session.endTime)}
       </div>
-      <div className={classes.detailRow}>
-        <CheckIcon className={classes.checkIcon} />
-        <span>Time: {timeStr}</span>
-      </div>
-      <div className={classes.detailRow}>
-        <CheckIcon className={classes.checkIcon} />
-        <span>Topic: {topic}</span>
+      {session.room && (
+        <div className={classes.metaRow}>
+          <RoomIcon className={classes.metaIcon} />
+          {session.room}
+        </div>
+      )}
+      <div className={classes.metaRow}>
+        <EventIcon className={classes.metaIcon} />
+        {dayLabel}
       </div>
 
-      {ongoing && !past ? (
-        <Button fullWidth variant="contained" className={classes.ongoingBtn}>
-          Ongoing
+      {status === 'live' ? (
+        <Button fullWidth variant="contained" className={classes.joinBtn}>
+          Join Now
         </Button>
       ) : (
-        <Button fullWidth variant="outlined" className={classes.attendBtn}>
-          Attend
+        <Button fullWidth variant="outlined" className={classes.upcomingBtn}>
+          Upcoming
         </Button>
       )}
     </div>
@@ -219,33 +295,68 @@ const ClassCard = ({ session, index }: { session: any; index: number }) => {
 
 const MyClasses = () => {
   const classes = useStyles();
+  const history = useHistory();
   const user = useSelector((state: IState) => state.core.user);
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<TimetableSession[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
+    const sid = user?.contactId || user?.id;
+    if (!sid) {
+      setLoading(false);
+      return;
+    }
     search(
-      remoteRoutes.classes,
-      { contactId: user.contactId, limit: 100 },
-      (data) => setSessions(Array.isArray(data) ? data : data?.data || []),
+      remoteRoutes.timetable,
+      { studentId: sid, contactId: sid },
+      (data: any) =>
+        setSessions(Array.isArray(data) ? data : data?.sessions || []),
       undefined,
       () => setLoading(false),
     );
-  }, [user.contactId]);
+  }, [user?.contactId]);
 
-  if (loading) {
+  if (loading)
     return (
       <Layout title="Live Classes">
         <Loading />
       </Layout>
     );
-  }
 
-  const upcoming = sessions.filter((s) => {
-    const d = getSessionDate(s);
-    return !d || !isPast(d) || isToday(d);
+  const now = new Date();
+  const currentDow = now.getDay();
+  const currentMins = now.getHours() * 60 + now.getMinutes();
+
+  const isLive = (s: TimetableSession) => {
+    if (s.isLive !== undefined) return s.isLive; // trust backend if provided
+    return (
+      s.dayOfWeek === currentDow &&
+      toMinutes(s.startTime) <= currentMins &&
+      toMinutes(s.endTime) >= currentMins
+    );
+  };
+
+  const isUpcomingToday = (s: TimetableSession) =>
+    s.dayOfWeek === currentDow && toMinutes(s.startTime) > currentMins;
+
+  const isUpcomingWeek = (s: TimetableSession) => {
+    // days later this week (Mon-based: wrap Sun correctly)
+    const daysLeft = (s.dayOfWeek - currentDow + 7) % 7;
+    return daysLeft > 0 && daysLeft <= 6;
+  };
+
+  const live = sessions.filter(isLive);
+  const upcomingToday = sessions.filter(isUpcomingToday);
+  const upcomingWeek = sessions.filter(isUpcomingWeek).sort((a, b) => {
+    const dA = (a.dayOfWeek - currentDow + 7) % 7;
+    const dB = (b.dayOfWeek - currentDow + 7) % 7;
+    return dA !== dB
+      ? dA - dB
+      : toMinutes(a.startTime) - toMinutes(b.startTime);
   });
+
+  const hasAnything =
+    live.length + upcomingToday.length + upcomingWeek.length > 0;
 
   return (
     <Layout title="Live Classes">
@@ -257,12 +368,9 @@ const MyClasses = () => {
           <span className={classes.breadcrumbActive}>Live Classes</span>
         </div>
 
-        <div className={classes.pageTitle}>My classes</div>
+        <div className={classes.pageTitle}>My Classes</div>
 
-        {/* Upcoming Classes */}
-        <div className={classes.sectionTitle}>Upcoming Classes</div>
-
-        {upcoming.length === 0 ? (
+        {!hasAnything ? (
           <div className={classes.emptyBox}>
             <EventIcon
               style={{
@@ -272,37 +380,84 @@ const MyClasses = () => {
                 margin: '0 auto 12px',
               }}
             />
-            <Typography style={{ color: '#8a8f99', fontWeight: 500 }}>
-              No upcoming classes scheduled
+            <Typography
+              style={{ color: '#8a8f99', fontWeight: 600, fontSize: 15 }}
+            >
+              No classes scheduled
             </Typography>
             <Typography
               variant="body2"
               style={{ color: '#b0b5bf', marginTop: 4 }}
             >
-              Your upcoming live classes will appear here
+              Your live and upcoming classes will appear here once your
+              timetable is set
             </Typography>
           </div>
         ) : (
-          <Grid container spacing={2}>
-            {upcoming.map((s, i) => (
-              <Grid item xs={12} sm={6} md={3} key={s.id || i}>
-                <ClassCard session={s} index={i} />
-              </Grid>
-            ))}
-          </Grid>
+          <>
+            {/* Live now */}
+            {live.length > 0 && (
+              <>
+                <div className={classes.sectionLabel}>🔴 Happening Now</div>
+                <Grid container spacing={2}>
+                  {live.map((s, i) => (
+                    <Grid item xs={12} sm={6} md={3} key={s.id || i}>
+                      <ClassCard session={s} status="live" />
+                    </Grid>
+                  ))}
+                </Grid>
+              </>
+            )}
+
+            {/* Upcoming today */}
+            {upcomingToday.length > 0 && (
+              <>
+                <div className={classes.sectionLabel}>Upcoming Today</div>
+                <Grid container spacing={2}>
+                  {upcomingToday.map((s, i) => (
+                    <Grid item xs={12} sm={6} md={3} key={s.id || i}>
+                      <ClassCard session={s} status="upcoming-today" />
+                    </Grid>
+                  ))}
+                </Grid>
+              </>
+            )}
+
+            {/* Later this week */}
+            {upcomingWeek.length > 0 && (
+              <>
+                <div className={classes.sectionLabel}>Later This Week</div>
+                <Grid container spacing={2}>
+                  {upcomingWeek.map((s, i) => (
+                    <Grid item xs={12} sm={6} md={3} key={s.id || i}>
+                      <ClassCard session={s} status="upcoming-week" />
+                    </Grid>
+                  ))}
+                </Grid>
+              </>
+            )}
+          </>
         )}
 
-        {/* All Class Time Table */}
+        {/* View full timetable */}
         <div className={classes.timetableSection}>
-          <div className={classes.sectionTitle} style={{ marginBottom: 8 }}>
-            All Class Time Table
+          <div>
+            <Typography style={{ fontWeight: 700, fontSize: 15, color: DARK }}>
+              Full Weekly Timetable
+            </Typography>
+            <Typography
+              style={{ fontSize: 13, color: '#8a8f99', marginTop: 2 }}
+            >
+              View your complete schedule including all past and upcoming
+              classes
+            </Typography>
           </div>
-          <Typography style={{ fontSize: 13, color: '#8a8f99' }}>
-            To view all class including those you attended or missed already.
-            Press the button below
-          </Typography>
-          <Button variant="contained" className={classes.viewAllBtn}>
-            View All
+          <Button
+            variant="contained"
+            className={classes.viewAllBtn}
+            onClick={() => history.push(localRoutes.myTimetable)}
+          >
+            View Timetable
           </Button>
         </div>
       </div>

@@ -51,10 +51,14 @@ export const useStyles = makeStyles((theme: Theme) =>
     content: {
       flexGrow: 1,
       height: '100%',
+      minWidth: 0, // prevents flex children from overflowing
     },
     body: {
-      backgroundColor: '#f5f4f2',
+      backgroundColor: '#f7f8fa',
       padding: theme.spacing(3),
+      [theme.breakpoints.down('sm')]: {
+        padding: theme.spacing(2),
+      },
       [theme.breakpoints.only('xs')]: {
         padding: theme.spacing(1.5),
       },
@@ -66,6 +70,9 @@ export const useStyles = makeStyles((theme: Theme) =>
     bodyPadded: {
       backgroundColor: '#f5f4f2',
       padding: theme.spacing(3),
+      [theme.breakpoints.down('sm')]: {
+        padding: theme.spacing(2),
+      },
       [theme.breakpoints.only('xs')]: {
         padding: theme.spacing(1.5),
       },

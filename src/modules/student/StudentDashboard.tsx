@@ -28,6 +28,7 @@ import { IState } from '../../data/types';
 import { get } from '../../utils/ajax';
 
 const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const CORAL = '#fe3a6a';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -36,9 +37,9 @@ const useStyles = makeStyles((theme: Theme) =>
       gap: 24,
       minHeight: '100%',
       alignItems: 'flex-start',
-      [theme.breakpoints.down('sm')]: { flexDirection: 'column' },
+      [theme.breakpoints.down('sm')]: { flexDirection: 'column', gap: 16 },
     },
-    main: { flex: 1, minWidth: 0 },
+    main: { flex: 1, minWidth: 0, width: '100%' },
     sidebar: {
       width: 280,
       flexShrink: 0,
@@ -55,18 +56,24 @@ const useStyles = makeStyles((theme: Theme) =>
       overflow: 'hidden',
       color: '#fff',
       minHeight: 100,
+      [theme.breakpoints.down('xs')]: {
+        padding: '16px 18px',
+        minHeight: 'auto',
+      },
     },
     reminderTitle: {
       fontWeight: 700,
       fontSize: 16,
       color: '#fff',
       marginBottom: 6,
+      [theme.breakpoints.down('xs')]: { fontSize: 14 },
     },
     reminderText: {
       fontSize: 13,
       color: 'rgba(255,255,255,0.85)',
       lineHeight: 1.5,
       maxWidth: '75%',
+      [theme.breakpoints.down('xs')]: { maxWidth: '90%', fontSize: 12 },
     },
     reminderDots: {
       display: 'flex',
@@ -93,6 +100,7 @@ const useStyles = makeStyles((theme: Theme) =>
       height: 140,
       borderRadius: '50%',
       background: 'rgba(255,255,255,0.08)',
+      [theme.breakpoints.down('xs')]: { width: 80, height: 80 },
     },
     bannerDecor2: {
       position: 'absolute' as any,
@@ -102,6 +110,7 @@ const useStyles = makeStyles((theme: Theme) =>
       height: 100,
       borderRadius: '50%',
       background: 'rgba(255,255,255,0.06)',
+      [theme.breakpoints.down('xs')]: { display: 'none' },
     },
 
     // ── Section titles ────────────────────────────────────────────
@@ -126,32 +135,41 @@ const useStyles = makeStyles((theme: Theme) =>
     },
     moduleCard: {
       flexShrink: 0,
-      width: 200,
-      borderRadius: 14,
-      background: '#364153',
+      width: 240,
+      borderRadius: 16,
+      background: '#ffffff',
+      border: '1px solid rgba(0,0,0,0.07)',
+      boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
       cursor: 'pointer',
-      padding: '18px 16px 16px',
-      transition: 'transform 0.15s',
-      '&:hover': { transform: 'translateY(-2px)' },
+      padding: '22px 20px 20px',
+      transition: 'transform 0.15s, box-shadow 0.15s',
+      '&:hover': {
+        transform: 'translateY(-3px)',
+        boxShadow: '0 6px 20px rgba(0,0,0,0.1)',
+      },
+      [theme.breakpoints.down('xs')]: { width: 200, padding: '16px 14px 14px' },
     },
     moduleIconWrap: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: 14,
+      borderRadius: 12,
+      background:
+        'linear-gradient(135deg, rgba(254,58,106,0.12) 0%, rgba(254,140,69,0.12) 100%)',
+      marginBottom: 16,
     },
     moduleName: {
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: 700,
-      color: '#ffffff',
+      color: '#1f2025',
       lineHeight: 1.3,
-      marginBottom: 4,
+      marginBottom: 6,
     },
     moduleCode: {
-      fontSize: 11,
-      color: 'rgba(255,255,255,0.5)',
+      fontSize: 12,
+      color: '#8a8f99',
     },
     emptyModules: {
       padding: '30px 0',
@@ -167,6 +185,8 @@ const useStyles = makeStyles((theme: Theme) =>
       padding: '18px 20px',
       marginTop: 24,
       boxShadow: 'none',
+      overflow: 'hidden',
+      [theme.breakpoints.down('xs')]: { padding: '14px 12px', marginTop: 16 },
     },
     chartDateRange: {
       fontSize: 11,
@@ -207,6 +227,7 @@ const useStyles = makeStyles((theme: Theme) =>
     },
     calDayCell: {
       display: 'flex',
+      flexDirection: 'column' as any,
       alignItems: 'center',
       justifyContent: 'center',
       padding: '3px 0',
@@ -232,6 +253,13 @@ const useStyles = makeStyles((theme: Theme) =>
       fontWeight: '700 !important' as any,
     },
     calDayOtherMonth: { opacity: 0.2 },
+    calDayDot: {
+      width: 4,
+      height: 4,
+      borderRadius: '50%',
+      background: CORAL,
+      margin: '2px auto 0',
+    },
 
     // ── Today's Class ─────────────────────────────────────────────
     todayCard: {
@@ -311,10 +339,11 @@ const StudentDashboard = () => {
       finish,
     );
 
-    // Timetable sessions
-    if (user?.contactId) {
+    // Timetable sessions — use contactId or id as fallback
+    const studentId = user?.contactId || user?.id;
+    if (studentId) {
       get(
-        `${remoteRoutes.timetable}?studentId=${user.contactId}`,
+        `${remoteRoutes.timetable}?contactId=${studentId}&studentId=${studentId}`,
         (data: any) =>
           setSessions(Array.isArray(data) ? data : data?.sessions || []),
         undefined,
@@ -331,21 +360,24 @@ const StudentDashboard = () => {
       undefined,
     );
 
-    // Attendance for last 7 days — uses student's own records
-    get(
-      `${remoteRoutes.attendanceSessions}?studentView=true&days=7`,
-      (data: any) => {
-        if (Array.isArray(data) && data.length) {
-          const counts: number[] = data
-            .slice(0, 7)
-            .map((d: any) => d.count || 0);
-          if (counts.length) setAttendanceDays(counts);
-        }
-      },
-      undefined,
-      undefined,
-    );
-  }, [user?.contactId]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Attendance for last 7 days
+    const attendanceId = user?.contactId || user?.id;
+    if (attendanceId) {
+      get(
+        `${remoteRoutes.studentAttendanceSummary}?contactId=${attendanceId}&days=7`,
+        (data: any) => {
+          if (Array.isArray(data) && data.length) {
+            const counts: number[] = data
+              .slice(-7)
+              .map((d: any) => d.count || 0);
+            if (counts.length) setAttendanceDays(counts);
+          }
+        },
+        undefined,
+        undefined,
+      );
+    }
+  }, [user?.contactId, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-scroll announcements
   useEffect(() => {
@@ -482,10 +514,10 @@ const StudentDashboard = () => {
             )}
           </div>
 
-          {/* My Modules */}
-          <Typography className={classes.sectionTitle}>My Modules</Typography>
+          {/* My Courses */}
+          <Typography className={classes.sectionTitle}>My Courses</Typography>
           {enrollments.length === 0 ? (
-            <div className={classes.emptyModules}>No modules enrolled yet.</div>
+            <div className={classes.emptyModules}>No courses enrolled yet.</div>
           ) : (
             <div className={classes.modulesRow}>
               {enrollments.map((en: any, i: number) => (
@@ -497,13 +529,17 @@ const StudentDashboard = () => {
                       `${localRoutes.myCourses}/${en.courseId || en.id}`,
                     )
                   }
-                  style={{ background: i % 2 === 0 ? '#364153' : '#2d3a4a' }}
                 >
                   <div className={classes.moduleIconWrap}>
-                    <MenuBookIcon style={{ fontSize: 22, color: '#ffffff' }} />
+                    <MenuBookIcon style={{ fontSize: 22, color: '#fe3a6a' }} />
                   </div>
                   <div className={classes.moduleName}>
-                    {en.courseName || en.name || 'Module'}
+                    {en.courseName ||
+                      en.title ||
+                      en.course?.title ||
+                      en.course?.name ||
+                      en.name ||
+                      'Course'}
                   </div>
                   <div className={classes.moduleCode}>
                     {en.courseCode || en.code || `${i + 1}.1 – ${i + 1}.4`}
@@ -561,6 +597,11 @@ const StudentDashboard = () => {
               {calDays.map((day, i) => {
                 const otherMonth = !isSameMonth(day, calMonth);
                 const todayDay = isToday(day);
+                // getDay(): 0=Sun,1=Mon... sessions use same convention
+                const dow = day.getDay();
+                const hasSession = sessions.some((s: any) =>
+                  typeof s.dayOfWeek === 'number' ? s.dayOfWeek === dow : false,
+                );
                 return (
                   <div
                     key={i}
@@ -575,6 +616,9 @@ const StudentDashboard = () => {
                     >
                       {format(day, 'd')}
                     </span>
+                    {hasSession && !otherMonth && (
+                      <div className={classes.calDayDot} />
+                    )}
                   </div>
                 );
               })}

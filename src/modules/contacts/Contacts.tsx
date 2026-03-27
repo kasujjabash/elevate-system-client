@@ -15,6 +15,7 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Theme,
@@ -306,12 +307,16 @@ const Contacts = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [todayCount, setTodayCount] = useState(0);
   const [weekCount, setWeekCount] = useState(0);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
+  // allStudents holds the full server response for client-side course filtering
+  const [allStudents, setAllStudents] = useState<any[]>([]);
 
   const buildFilter = () => {
-    const f: any = { limit: 200, skip: 0 };
+    const f: any = {};
     if (query.trim()) f.query = query.trim();
     if (hub) f.hub = hub;
-    if (course) f.course = course;
+    // NOTE: server ignores `course` param — we filter client-side after fetch
     if (dateFrom) f.dateFrom = dateFrom;
     if (dateTo) f.dateTo = dateTo;
     if (quickFilter === 'today') f.dateFrom = format(new Date(), 'yyyy-MM-dd');
@@ -319,6 +324,14 @@ const Contacts = () => {
       const s = new Date();
       s.setDate(s.getDate() - s.getDay());
       f.dateFrom = format(s, 'yyyy-MM-dd');
+    }
+    // When course filter is active fetch all; pagination applied client-side
+    if (course) {
+      f.limit = 10000;
+      f.skip = 0;
+    } else {
+      f.limit = rowsPerPage;
+      f.skip = page * rowsPerPage;
     }
     return f;
   };
@@ -330,6 +343,7 @@ const Contacts = () => {
       buildFilter(),
       (resp: any) => {
         const list: any[] = Array.isArray(resp) ? resp : resp.data || [];
+        setAllStudents(list);
         dispatch({ type: crmConstants.crmFetchAll, payload: list });
         setTotalCount(
           Array.isArray(resp) ? list.length : resp.total ?? list.length,
@@ -355,13 +369,14 @@ const Contacts = () => {
   useEffect(() => {
     fetchStudents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, hub, course, dateFrom, dateTo, quickFilter]);
+  }, [query, hub, course, dateFrom, dateTo, quickFilter, page, rowsPerPage]);
 
   const handleQuickFilter = (f: 'all' | 'today' | 'week') => {
     setQuickFilter(f);
     setDateFrom('');
     setDateTo('');
     setShowDateRange(false);
+    setPage(0);
   };
 
   const clearFilters = () => {
@@ -372,6 +387,7 @@ const Contacts = () => {
     setDateTo('');
     setQuickFilter('all');
     setShowDateRange(false);
+    setPage(0);
   };
 
   const hasActiveFilters = !!(
@@ -382,7 +398,24 @@ const Contacts = () => {
     dateTo ||
     quickFilter !== 'all'
   );
-  const students: any[] = data || [];
+  const rawStudents: any[] = data || [];
+
+  // Client-side course filter (server doesn't implement it)
+  const courseFilteredStudents = course
+    ? allStudents.filter((s) => {
+        const sc = (s.course || s.interestedInCourses || '')
+          .toLowerCase()
+          .trim();
+        return sc === course;
+      })
+    : rawStudents;
+
+  // When course filter active, paginate client-side
+  const students = course
+    ? courseFilteredStudents.slice(page * rowsPerPage, (page + 1) * rowsPerPage)
+    : rawStudents;
+
+  const displayTotal = course ? courseFilteredStudents.length : totalCount;
 
   const activeLabel = () => {
     const parts: string[] = [];
@@ -459,9 +492,7 @@ const Contacts = () => {
                 <PeopleIcon style={{ color: '#fe3a6a', fontSize: 20 }} />
               </div>
               <div>
-                <div className={classes.statNumber}>
-                  {totalCount || students.length}
-                </div>
+                <div className={classes.statNumber}>{displayTotal}</div>
                 <div className={classes.statLabel}>Total Students</div>
               </div>
             </Card>
@@ -511,7 +542,10 @@ const Contacts = () => {
           <TextField
             placeholder="Search name, email, phone…"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(0);
+            }}
             variant="outlined"
             size="small"
             className={classes.searchInput}
@@ -527,7 +561,10 @@ const Contacts = () => {
           <TextField
             select
             value={hub}
-            onChange={(e) => setHub(e.target.value)}
+            onChange={(e) => {
+              setHub(e.target.value);
+              setPage(0);
+            }}
             variant="outlined"
             size="small"
             className={classes.filterSelect}
@@ -550,7 +587,10 @@ const Contacts = () => {
           <TextField
             select
             value={course}
-            onChange={(e) => setCourse(e.target.value)}
+            onChange={(e) => {
+              setCourse(e.target.value);
+              setPage(0);
+            }}
             variant="outlined"
             size="small"
             className={classes.filterSelect}
@@ -682,8 +722,8 @@ const Contacts = () => {
           <Box mb={1.5}>
             <Typography style={{ fontSize: 13, color: '#8a8f99' }}>
               Showing{' '}
-              <strong style={{ color: '#1f2025' }}>{students.length}</strong>{' '}
-              student{students.length !== 1 ? 's' : ''}
+              <strong style={{ color: '#1f2025' }}>{displayTotal}</strong>{' '}
+              student{displayTotal !== 1 ? 's' : ''}
               {activeLabel() && <span> · {activeLabel()}</span>}
             </Typography>
           </Box>
@@ -1007,6 +1047,27 @@ const Contacts = () => {
           </Grid>
         )}
       </div>
+
+      {/* Pagination */}
+      {displayTotal > 0 &&
+        (() => {
+          const Pager = TablePagination as any;
+          return (
+            <Pager
+              component="div"
+              count={displayTotal}
+              page={page}
+              rowsPerPage={rowsPerPage}
+              rowsPerPageOptions={[20, 50, 100]}
+              onChangePage={(_: any, newPage: number) => setPage(newPage)}
+              onChangeRowsPerPage={(e: React.ChangeEvent<HTMLInputElement>) => {
+                setRowsPerPage(parseInt(e.target.value, 10));
+                setPage(0);
+              }}
+              style={{ borderTop: '1px solid #f0f0f0', marginTop: 4 }}
+            />
+          );
+        })()}
 
       <EditDialog
         title="Add New Student"
