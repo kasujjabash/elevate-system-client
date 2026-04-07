@@ -6,10 +6,12 @@ import {
   Button,
   CircularProgress,
   Chip,
+  Dialog,
   Grid,
   LinearProgress,
   Tab,
   Tabs,
+  TextField,
   Typography,
 } from '@material-ui/core';
 import { makeStyles, Theme } from '@material-ui/core/styles';
@@ -29,7 +31,8 @@ import EventIcon from '@material-ui/icons/Event';
 import HowToRegIcon from '@material-ui/icons/HowToReg';
 import TrendingUpIcon from '@material-ui/icons/TrendingUp';
 import Layout from '../../../components/layout/Layout';
-import { get } from '../../../utils/ajax';
+import { get, put } from '../../../utils/ajax';
+import Toast from '../../../utils/Toast';
 import { localRoutes, remoteRoutes } from '../../../data/constants';
 import { getRouteParam } from '../../../utils/routHelpers';
 
@@ -119,10 +122,10 @@ const useStyles = makeStyles((theme: Theme) => ({
     borderRadius: 8,
     textTransform: 'none' as any,
     padding: '6px 16px',
-    border: '1px solid rgba(254,58,106,0.4)',
-    color: CORAL,
-    background: 'rgba(254,58,106,0.08)',
-    '&:hover': { background: 'rgba(254,58,106,0.15)' },
+    border: '1px solid rgba(255,255,255,0.5)',
+    color: '#fff',
+    background: 'rgba(0,0,0,0.25)',
+    '&:hover': { background: 'rgba(0,0,0,0.38)' },
   },
 
   // ── Stats strip ──────────────────────────────────────────────────────────
@@ -286,6 +289,12 @@ const AdminStudentDetails = (props: Props) => {
   const [tab, setTab] = useState(0);
   const [attendance, setAttendance] = useState<any[]>([]);
 
+  // deactivation confirmation
+  const [deactivateOpen, setDeactivateOpen] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState('');
+  const [confirmEmailError, setConfirmEmailError] = useState('');
+  const [deactivating, setDeactivating] = useState(false);
+
   useEffect(() => {
     if (!studentId) return;
     setLoading(true);
@@ -373,6 +382,31 @@ const AdminStudentDetails = (props: Props) => {
 
   const attendancePct =
     student.attendanceRate != null ? `${student.attendanceRate}%` : '—';
+
+  const userId = student.userId || student.user?.id;
+
+  function handleDeactivate() {
+    if (confirmEmail !== email) {
+      setConfirmEmailError('Email does not match. Please type it exactly.');
+      return;
+    }
+    setDeactivating(true);
+    const updated = { ...student, isActive: !isActive };
+    put(
+      `${remoteRoutes.users}/${userId}`,
+      updated,
+      () => {
+        setStudent((prev: any) => ({ ...prev, isActive: !isActive }));
+        Toast.success(
+          `Account ${!isActive ? 'activated' : 'deactivated'} successfully`,
+        );
+        setDeactivateOpen(false);
+        setConfirmEmail('');
+      },
+      undefined,
+      () => setDeactivating(false),
+    );
+  }
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -483,7 +517,18 @@ const AdminStudentDetails = (props: Props) => {
             <Button
               className={classes.actionBtnDanger}
               size="small"
-              startIcon={<BlockIcon style={{ fontSize: 14 }} />}
+              startIcon={
+                isActive ? (
+                  <BlockIcon style={{ fontSize: 14 }} />
+                ) : (
+                  <CheckCircleIcon style={{ fontSize: 14 }} />
+                )
+              }
+              onClick={() => {
+                setDeactivateOpen(true);
+                setConfirmEmail('');
+                setConfirmEmailError('');
+              }}
             >
               {isActive ? 'Deactivate' : 'Activate'} Account
             </Button>
@@ -881,6 +926,119 @@ const AdminStudentDetails = (props: Props) => {
           </div>
         )}
       </div>
+
+      {/* ── Deactivation Confirmation Dialog ── */}
+      <Dialog
+        open={deactivateOpen}
+        onClose={() => {
+          setDeactivateOpen(false);
+          setConfirmEmail('');
+          setConfirmEmailError('');
+        }}
+        maxWidth="xs"
+        fullWidth
+      >
+        <div style={{ padding: 28 }}>
+          <Typography
+            style={{
+              fontWeight: 800,
+              fontSize: 16,
+              color: DARK,
+              marginBottom: 8,
+            }}
+          >
+            {isActive ? 'Deactivate' : 'Activate'} Account
+          </Typography>
+          <Typography
+            style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}
+          >
+            You are about to{' '}
+            <strong>{isActive ? 'deactivate' : 'activate'}</strong> the account
+            for <strong>{fullName}</strong>.
+          </Typography>
+          <Typography
+            style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}
+          >
+            To confirm, type the student's email address:
+            {email && (
+              <span
+                style={{
+                  display: 'block',
+                  fontWeight: 700,
+                  color: DARK,
+                  marginTop: 4,
+                }}
+              >
+                {email}
+              </span>
+            )}
+          </Typography>
+          <TextField
+            fullWidth
+            variant="outlined"
+            size="small"
+            label="Type email to confirm"
+            value={confirmEmail}
+            onChange={(e) => {
+              setConfirmEmail(e.target.value);
+              setConfirmEmailError('');
+            }}
+            onPaste={(e) => e.preventDefault()}
+            error={!!confirmEmailError}
+            helperText={
+              confirmEmailError ||
+              'Pasting is disabled — type the email manually'
+            }
+            inputProps={{ autoComplete: 'off' }}
+          />
+          <div
+            style={{
+              display: 'flex',
+              gap: 8,
+              marginTop: 24,
+              justifyContent: 'flex-end',
+            }}
+          >
+            <Button
+              style={{
+                borderRadius: 8,
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: 13,
+                border: '1px solid #e5e7eb',
+              }}
+              onClick={() => {
+                setDeactivateOpen(false);
+                setConfirmEmail('');
+                setConfirmEmailError('');
+              }}
+              disabled={deactivating}
+            >
+              Cancel
+            </Button>
+            <Button
+              style={{
+                borderRadius: 8,
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: 13,
+                background: isActive ? '#dc2626' : '#10b981',
+                color: '#fff',
+              }}
+              onClick={handleDeactivate}
+              disabled={deactivating || !confirmEmail}
+            >
+              {deactivating ? (
+                <CircularProgress size={16} style={{ color: '#fff' }} />
+              ) : isActive ? (
+                'Deactivate'
+              ) : (
+                'Activate'
+              )}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </Layout>
   );
 };

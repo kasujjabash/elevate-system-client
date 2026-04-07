@@ -55,9 +55,7 @@ const useStyles = makeStyles((theme: Theme) => ({
     alignItems: 'center',
     overflow: 'hidden',
     position: 'relative' as any,
-    [theme.breakpoints.down('xs')]: {
-      padding: '16px 20px',
-    },
+    [theme.breakpoints.down('xs')]: { padding: '16px 20px' },
   },
   bannerTitle: {
     fontSize: 20,
@@ -130,9 +128,7 @@ const useStyles = makeStyles((theme: Theme) => ({
     display: 'flex',
     gap: 20,
     alignItems: 'flex-start',
-    [theme.breakpoints.down('sm')]: {
-      flexDirection: 'column' as any,
-    },
+    [theme.breakpoints.down('sm')]: { flexDirection: 'column' as any },
   },
   gridWrap: {
     flex: 1,
@@ -186,7 +182,6 @@ const useStyles = makeStyles((theme: Theme) => ({
     lineHeight: 1.3,
     height: '100%',
     overflow: 'hidden',
-    cursor: 'pointer',
   },
 
   sidebar: {
@@ -220,7 +215,6 @@ const useStyles = makeStyles((theme: Theme) => ({
 
 const parseHour = (timeStr: string) => {
   if (!timeStr) return 8;
-  // 12-hour: "09:00 AM" / "2:00 PM"
   const ampm = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
   if (ampm) {
     let h = parseInt(ampm[1], 10);
@@ -228,7 +222,6 @@ const parseHour = (timeStr: string) => {
     if (ampm[3].toUpperCase() === 'AM' && h === 12) h = 0;
     return h;
   }
-  // 24-hour: "09:00" / "14:00" / "09:00:00"
   const h24 = timeStr.match(/^(\d{1,2}):(\d{2})/);
   if (h24) return parseInt(h24[1], 10);
   return 8;
@@ -258,44 +251,35 @@ const MyTimetable = () => {
   const weekEnd = addDays(weekStart, 6);
   const weekDates = DAYS.map((_, i) => addDays(weekStart, i));
 
-  // Build grid lookup: dayIndex (Mon=0) -> hourIndex -> session
-  // Handles both recurring sessions (dayOfWeek field) and date-specific sessions
   const gridMap: Record<number, Record<number, any>> = {};
-
   sessions.forEach((s) => {
-    // Recurring session — has dayOfWeek (0=Sun JS convention)
-    // Accept both number and string values (e.g. Prisma returns Int but JSON may vary)
     if (s.dayOfWeek != null) {
-      const dayIdx = (Number(s.dayOfWeek) + 6) % 7; // convert to Mon=0
-      const hour = s.startTime ? parseHour(s.startTime) : 8;
-      const hourIdx = hour - 8;
+      const dayIdx = (Number(s.dayOfWeek) + 6) % 7;
+      const hourIdx = parseHour(s.startTime) - 8;
       if (hourIdx >= 0 && hourIdx < HOURS.length) {
         if (!gridMap[dayIdx]) gridMap[dayIdx] = {};
         if (!gridMap[dayIdx][hourIdx]) gridMap[dayIdx][hourIdx] = s;
       }
       return;
     }
-
-    // Date-specific session — only show if it falls in the current week
     const raw = s.startDate || s.date || s.sessionDate;
     if (!raw) return;
     try {
       const d = typeof raw === 'string' ? parseISO(raw) : new Date(raw);
       if (d >= weekStart && d <= weekEnd) {
-        const dayIdx = (d.getDay() + 6) % 7; // Mon=0
-        const hour = s.startTime ? parseHour(s.startTime) : d.getHours();
-        const hourIdx = hour - 8;
+        const dayIdx = (d.getDay() + 6) % 7;
+        const hourIdx =
+          (s.startTime ? parseHour(s.startTime) : d.getHours()) - 8;
         if (hourIdx >= 0 && hourIdx < HOURS.length) {
           if (!gridMap[dayIdx]) gridMap[dayIdx] = {};
           if (!gridMap[dayIdx][hourIdx]) gridMap[dayIdx][hourIdx] = s;
         }
       }
     } catch {
-      // ignore
+      /* ignore */
     }
   });
 
-  // Sidebar list: recurring sessions always show; date-specific filtered to week
   const weekSessions = sessions.filter((s) => {
     if (s.dayOfWeek != null) return true;
     const raw = s.startDate || s.date || s.sessionDate;
@@ -372,7 +356,6 @@ const MyTimetable = () => {
           {/* Grid */}
           <div className={classes.gridWrap}>
             <div className={classes.grid}>
-              {/* Header row */}
               <div className={classes.headerCell} />
               {DAYS.map((day, i) => (
                 <div key={day} className={classes.headerCell}>
@@ -383,7 +366,6 @@ const MyTimetable = () => {
                 </div>
               ))}
 
-              {/* Hour rows */}
               {HOURS.map((hour, hi) => (
                 <React.Fragment key={hour}>
                   <div className={classes.timeCell}>{hour}</div>
@@ -446,20 +428,9 @@ const MyTimetable = () => {
               </Typography>
             ) : (
               weekSessions.slice(0, 6).map((s, i) => {
-                const DAY_NAMES = [
-                  'Sun',
-                  'Mon',
-                  'Tue',
-                  'Wed',
-                  'Thu',
-                  'Fri',
-                  'Sat',
-                ];
                 let dateLabel = '—';
                 if (s.dayOfWeek != null) {
-                  // Show the actual date for this session in the current week
-                  const dow = Number(s.dayOfWeek); // 0=Sun
-                  const dayInWeek = weekDates[(dow + 6) % 7]; // convert to Mon=0
+                  const dayInWeek = weekDates[(Number(s.dayOfWeek) + 6) % 7];
                   dateLabel = format(dayInWeek, 'do MMM yyyy');
                 } else {
                   const raw = s.startDate || s.date;

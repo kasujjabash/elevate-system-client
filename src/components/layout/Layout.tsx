@@ -15,7 +15,7 @@ import NavMenu from './NavMenu';
 import { useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { IState } from '../../data/types';
-import { isStudent } from '../../data/appRoles';
+import { isStudent, isTrainer } from '../../data/appRoles';
 import { localRoutes } from '../../data/constants';
 
 interface IProps {
@@ -29,6 +29,7 @@ function Layout(props: IProps) {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const user = useSelector((state: IState) => state.core.user);
   const student = isStudent(user);
+  const trainer = isTrainer(user);
   const history = useHistory();
 
   function handleDrawerToggle() {
@@ -67,13 +68,31 @@ function Layout(props: IProps) {
                 Student Portal
               </Typography>
             </div>
+          ) : trainer ? (
+            <div style={{ flexGrow: 1 }}>
+              <Typography
+                style={{
+                  fontWeight: 700,
+                  fontSize: 15,
+                  color: '#1f2025',
+                  lineHeight: 1.2,
+                }}
+              >
+                {user?.fullName}
+              </Typography>
+              <Typography
+                style={{ fontSize: 11, color: '#8a8f99', lineHeight: 1 }}
+              >
+                {user?.contactId ? `ID: ${user.contactId} · ` : ''}Instructor
+              </Typography>
+            </div>
           ) : (
             <Typography variant="h6" noWrap className={classes.title}>
               {props.title}
             </Typography>
           )}
 
-          {student ? (
+          {student || trainer ? (
             <IconButton
               size="small"
               style={{ color: '#8a8f99', marginRight: 4 }}

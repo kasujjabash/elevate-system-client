@@ -3,10 +3,8 @@ import * as yup from 'yup';
 import { FormikHelpers } from 'formik';
 import Grid from '@material-ui/core/Grid';
 import { useDispatch } from 'react-redux';
-import { Box } from '@material-ui/core';
 import { reqEmail, reqString } from '../../data/validations';
 import {
-  ageCategories,
   civilStatusCategories,
   genderCategories,
 } from '../../data/comboCategories';
@@ -19,10 +17,8 @@ import { crmConstants } from '../../data/contacts/reducer';
 import { post } from '../../utils/ajax';
 import Toast from '../../utils/Toast';
 import XRadioInput from '../../components/inputs/XRadioInput';
+import XDateInput from '../../components/inputs/XDateInput';
 import { ICreatePersonDto } from './types';
-import { getDayList, getMonthsList } from '../../utils/dateHelpers';
-import { XMapsInput } from '../../components/inputs/XMapsInput';
-import { parseGooglePlace } from '../../components/plain-inputs/PMapsInput';
 
 const HUB_OPTIONS = ['Katanga', 'Kosovo', 'Jinja', 'Namayemba', 'Lyantode'];
 const COURSE_OPTIONS = [
@@ -42,22 +38,20 @@ const schema = yup.object().shape({
   lastName: reqString,
   gender: reqString,
   civilStatus: reqString,
-  ageGroup: reqString,
-  hub: reqString,
-  course: reqString,
+  dateOfBirth: reqString,
   email: reqEmail,
   phone: reqString,
+  hub: reqString,
+  course: reqString,
 });
 
 const initialValues = {
   firstName: '',
   middleName: '',
   lastName: '',
-  birthDay: '',
-  birthMonth: '',
+  dateOfBirth: null,
   gender: '',
   civilStatus: '',
-  ageGroup: '',
   placeOfWork: '',
   residence: '',
   hub: '',
@@ -74,12 +68,13 @@ const NewPersonForm = ({ done }: IProps) => {
       firstName: values.firstName,
       middleName: values.middleName,
       lastName: values.lastName,
-      dateOfBirth: `1800-${values.birthMonth}-${values.birthDay}T00:00:00.000Z`,
+      dateOfBirth: values.dateOfBirth
+        ? new Date(values.dateOfBirth).toISOString()
+        : undefined,
       gender: values.gender,
       civilStatus: values.civilStatus,
-      ageGroup: values.ageGroup,
       placeOfWork: values.placeOfWork,
-      residence: parseGooglePlace(values.residence),
+      residence: values.residence,
       hub: values.hub,
       course: values.course,
       email: values.email,
@@ -156,34 +151,12 @@ const NewPersonForm = ({ done }: IProps) => {
           />
         </Grid>
         <Grid item xs={12} md={6}>
-          <Box width="100%" display="flex">
-            <Box width="50%">
-              <XSelectInput
-                name="birthMonth"
-                label="Birth Month"
-                options={toOptions(getMonthsList())}
-                variant="outlined"
-                margin="none"
-              />
-            </Box>
-            <Box width="50%">
-              <XSelectInput
-                name="birthDay"
-                label="Birth Day"
-                options={toOptions(getDayList())}
-                variant="outlined"
-                margin="none"
-              />
-            </Box>
-          </Box>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <XSelectInput
-            name="ageGroup"
-            label="Age Group"
-            options={toOptions(ageCategories)}
+          <XDateInput
+            name="dateOfBirth"
+            label="Date of Birth"
             variant="outlined"
             margin="none"
+            disableFuture
           />
         </Grid>
         <Grid item xs={12} md={6}>
@@ -232,9 +205,10 @@ const NewPersonForm = ({ done }: IProps) => {
           />
         </Grid>
         <Grid item xs={12} md={6}>
-          <XMapsInput
+          <XTextInput
             name="residence"
             label="Residence"
+            type="text"
             variant="outlined"
             margin="none"
           />

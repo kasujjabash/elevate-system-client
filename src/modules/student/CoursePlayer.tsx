@@ -480,6 +480,47 @@ const useStyles = makeStyles((theme: Theme) =>
       justifyContent: 'center',
       padding: 48,
     },
+
+    /* ── Resources section ──────────────────────────── */
+    resourcesSection: { marginTop: 24, marginBottom: 8 },
+    resourceRow: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      background: '#fff',
+      border: '1px solid #ede8e3',
+      borderRadius: 10,
+      padding: '12px 16px',
+      marginBottom: 8,
+      '&:hover': { background: '#fdf9f7' },
+    },
+    resourceIcon: {
+      width: 34,
+      height: 34,
+      borderRadius: 8,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    resourceName: { flex: 1, fontSize: 13, fontWeight: 600, color: DARK },
+    resourceType: {
+      fontSize: 10,
+      fontWeight: 700,
+      borderRadius: 4,
+      padding: '2px 7px',
+      color: '#fff',
+    },
+    resourceDownloadBtn: {
+      fontSize: 11,
+      fontWeight: 600,
+      color: CORAL,
+      textTransform: 'none' as any,
+      padding: '3px 10px',
+      border: '1px solid rgba(254,58,106,0.2)',
+      borderRadius: 6,
+      '&:hover': { background: 'rgba(254,58,106,0.06)' },
+    },
   }),
 );
 
@@ -615,6 +656,9 @@ const CoursePlayer = () => {
   const [loadingId, setLoadingId] = useState<number | null>(null);
   const [markingId, setMarkingId] = useState<number | null>(null);
   const [courseTitle, setCourseTitle] = useState('');
+  const [resources, setResources] = useState<
+    Array<{ id: number | string; title: string; type: string; url?: string }>
+  >([]);
 
   const baseUrl = remoteRoutes.coursesBase;
 
@@ -728,6 +772,18 @@ const CoursePlayer = () => {
     loadModules();
   }, [loadModules]);
 
+  // Fetch course resources
+  useEffect(() => {
+    if (!courseId) return;
+    get(
+      `${remoteRoutes.courseResources}/${courseId}/resources`,
+      (data: any) => {
+        const list = Array.isArray(data) ? data : data?.data || [];
+        setResources(list);
+      },
+    );
+  }, [courseId]);
+
   /* ── render ── */
   return (
     <Layout title={courseTitle || 'Course'}>
@@ -786,6 +842,52 @@ const CoursePlayer = () => {
               <MenuBookIcon style={{ fontSize: 12 }} />
               Course Modules
             </div>
+
+            {resources.length > 0 && (
+              <div className={classes.resourcesSection}>
+                <div className={classes.sectionTitle}>
+                  <DescriptionIcon style={{ fontSize: 12 }} />
+                  Course Resources
+                </div>
+                {resources.map((r) => {
+                  const typeColors: Record<string, string> = {
+                    PDF: CORAL,
+                    VIDEO: '#8b5cf6',
+                    PRESENTATION: '#3b82f6',
+                    DOCUMENT: '#f59e0b',
+                    IMAGE: DONE,
+                    LINK: '#6b7280',
+                  };
+                  const col = typeColors[r.type?.toUpperCase()] || '#9ca3af';
+                  return (
+                    <div key={r.id} className={classes.resourceRow}>
+                      <div
+                        className={classes.resourceIcon}
+                        style={{ background: `${col}18` }}
+                      >
+                        <DescriptionIcon style={{ fontSize: 16, color: col }} />
+                      </div>
+                      <span className={classes.resourceName}>{r.title}</span>
+                      <span
+                        className={classes.resourceType}
+                        style={{ background: col }}
+                      >
+                        {r.type}
+                      </span>
+                      {r.url && (
+                        <Button
+                          size="small"
+                          className={classes.resourceDownloadBtn}
+                          onClick={() => window.open(r.url, '_blank')}
+                        >
+                          Open
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {modules.map((mod, idx) => {
               const locked = isLocked(idx);

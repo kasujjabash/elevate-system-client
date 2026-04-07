@@ -12,8 +12,8 @@ export interface ICreatePersonDto {
   middleName?: string;
   gender: Gender;
   civilStatus: CivilStatus;
-  dateOfBirth: string;
-  ageGroup: string;
+  dateOfBirth?: string;
+  ageGroup?: string;
   hub: string;
   course: string;
   residence?: any;

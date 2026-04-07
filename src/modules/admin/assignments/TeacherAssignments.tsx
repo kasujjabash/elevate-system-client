@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Box,
   Button,
-  Card,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -12,16 +12,12 @@ import {
   FormControlLabel,
   Grid,
   IconButton,
+  InputBase,
   LinearProgress,
   makeStyles,
   MenuItem,
   Switch,
   Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   Tabs,
   TextField,
   Theme,
@@ -37,119 +33,252 @@ import CloudUploadIcon from '@material-ui/icons/CloudUpload';
 import DeleteIcon from '@material-ui/icons/Delete';
 import StarIcon from '@material-ui/icons/Star';
 import LockIcon from '@material-ui/icons/Lock';
+import EditIcon from '@material-ui/icons/Edit';
+import SearchIcon from '@material-ui/icons/Search';
 import { format, parseISO, addWeeks, isBefore, startOfDay } from 'date-fns';
 import Layout from '../../../components/layout/Layout';
 import { get, post } from '../../../utils/ajax';
 import { remoteRoutes } from '../../../data/constants';
 import Toast from '../../../utils/Toast';
 
+const CORAL = '#fe3a6a';
+const ORANGE = '#fe8c45';
+const DARK = '#1f2025';
+const GREEN = '#10b981';
+const AMBER = '#f59e0b';
+const BLUE = '#3b82f6';
+const PURPLE = '#8b5cf6';
+
 const useStyles = makeStyles((theme: Theme) => ({
-  root: { padding: theme.spacing(3) },
-  header: {
+  root: { paddingBottom: 32 },
+
+  pageHeader: {
     display: 'flex',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: theme.spacing(3),
+    alignItems: 'flex-start',
+    marginBottom: 20,
+    flexWrap: 'wrap' as any,
+    gap: 12,
   },
-  pageTitle: {
-    fontSize: '22px',
-    fontWeight: 700,
-    color: '#1f2025',
-    fontFamily: '"Plus Jakarta Sans", sans-serif',
-    letterSpacing: '-0.02em',
-  },
-  pageSubtitle: {
-    fontSize: 14,
-    color: '#8a8f99',
-    marginTop: 2,
-  },
-  addButton: {
-    background: 'linear-gradient(90deg, #fe3a6a 0%, #fe8c45 100%)',
+  pageTitle: { fontSize: 22, fontWeight: 800, color: DARK },
+  pageSub: { fontSize: 13, color: '#8a8f99', marginTop: 2 },
+  addBtn: {
+    background: CORAL,
     color: '#fff',
     borderRadius: 8,
-    fontWeight: 700,
-    textTransform: 'none',
+    padding: '8px 18px',
+    fontSize: 13,
+    fontWeight: 600,
+    textTransform: 'none' as any,
     boxShadow: 'none',
     '&:hover': {
-      background: 'linear-gradient(90deg, #d4183f 0%, #d4712e 100%)',
-      boxShadow: '0 4px 16px rgba(254,58,106,0.3)',
+      background: '#e02d5c',
+      boxShadow: '0 4px 14px rgba(254,58,106,0.3)',
     },
   },
-  tabs: {
-    marginBottom: theme.spacing(3),
-    borderBottom: '1px solid #f0f0f0',
-  },
-  tableCard: {
+
+  statsRow: { marginBottom: 24 },
+  statCard: {
+    background: '#fff',
     borderRadius: 12,
-    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-    border: '1px solid #f0f0f0',
-    overflow: 'hidden',
+    border: '1px solid rgba(0,0,0,0.08)',
+    padding: '16px 20px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 14,
+    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
   },
-  tableHeadCell: {
-    fontWeight: 700,
-    fontSize: '12px',
+  statIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  statNum: { fontSize: 24, fontWeight: 800, color: DARK, lineHeight: 1 },
+  statLbl: {
+    fontSize: 11,
     color: '#8a8f99',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    backgroundColor: '#f8f9fa',
-    padding: '10px 16px',
-    borderBottom: '1px solid #f0f0f0',
+    marginTop: 3,
+    fontWeight: 600,
+    textTransform: 'uppercase' as any,
+    letterSpacing: '0.04em',
   },
-  tableCell: {
-    fontSize: '13px',
-    color: '#1f2025',
-    padding: '12px 16px',
-    borderBottom: '1px solid #f8f8f8',
+
+  toolbar: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 18,
+    flexWrap: 'wrap' as any,
+  },
+  searchBox: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    background: '#fff',
+    border: '1px solid rgba(0,0,0,0.1)',
+    borderRadius: 8,
+    padding: '7px 14px',
+    flex: 1,
+    maxWidth: 380,
+  },
+
+  tabs: {
+    marginBottom: 20,
+    '& .MuiTabs-indicator': { backgroundColor: CORAL },
+  },
+  tab: { textTransform: 'none' as any, fontWeight: 600, fontSize: 13 },
+
+  // Assessment card
+  assessmentCard: {
+    background: '#fff',
+    borderRadius: 14,
+    border: '1px solid rgba(0,0,0,0.08)',
+    padding: '18px 22px',
+    marginBottom: 14,
+    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+  },
+  cardTopRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  badgesRow: { display: 'flex', gap: 6, flexWrap: 'wrap' as any },
+  courseCodeBadge: {
+    background: 'rgba(254,58,106,0.08)',
+    color: CORAL,
+    fontSize: 10,
+    fontWeight: 700,
+    borderRadius: 5,
+    padding: '2px 8px',
+  },
+  typeBadge: {
+    fontSize: 10,
+    fontWeight: 700,
+    borderRadius: 5,
+    padding: '2px 8px',
+  },
+  statusBadge: {
+    fontSize: 10,
+    fontWeight: 700,
+    borderRadius: 5,
+    padding: '2px 8px',
+  },
+  actionsRow: { display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 },
+  editBtn: {
+    fontSize: 11,
+    fontWeight: 600,
+    color: '#5a5e6b',
+    border: '1px solid rgba(0,0,0,0.12)',
+    borderRadius: 7,
+    padding: '4px 12px',
+    textTransform: 'none' as any,
+  },
+  gradeBtn: {
+    background: CORAL,
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: 700,
+    borderRadius: 7,
+    padding: '5px 14px',
+    textTransform: 'none' as any,
+    boxShadow: 'none',
+    '&:hover': { background: '#e02d5c' },
+  },
+  exportBtn: {
+    background: GREEN,
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: 700,
+    borderRadius: 7,
+    padding: '5px 14px',
+    textTransform: 'none' as any,
+    boxShadow: 'none',
+    '&:hover': { background: '#0ca678' },
+  },
+
+  assessmentTitle: {
+    fontSize: 15,
+    fontWeight: 700,
+    color: DARK,
+    marginBottom: 3,
+  },
+  assessmentCourse: { fontSize: 12, color: '#8a8f99', marginBottom: 12 },
+  milestoneBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 3,
+    padding: '2px 8px',
+    borderRadius: 20,
+    fontSize: 10,
+    fontWeight: 700,
+    backgroundColor: '#fff7ed',
+    color: AMBER,
+    border: '1px solid #fde68a',
+    marginLeft: 6,
   },
   weekBadge: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: 4,
-    padding: '3px 10px',
+    gap: 3,
+    padding: '2px 8px',
     borderRadius: 20,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 700,
     backgroundColor: '#eef2ff',
     color: '#6366f1',
     border: '1px solid #c7d2fe',
-  },
-  milestoneBadge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 4,
-    padding: '3px 10px',
-    borderRadius: 20,
-    fontSize: 11,
-    fontWeight: 700,
-    backgroundColor: '#fff7ed',
-    color: '#f59e0b',
-    border: '1px solid #fde68a',
     marginLeft: 6,
   },
-  uploadZone: {
-    border: '2px dashed #e0e0e0',
-    borderRadius: 10,
-    padding: theme.spacing(3),
-    textAlign: 'center',
-    cursor: 'pointer',
-    transition: 'border-color 0.2s',
-    '&:hover': { borderColor: '#fe3a6a' },
+
+  metricsRow: {
+    display: 'flex',
+    gap: 28,
+    flexWrap: 'wrap' as any,
+    marginBottom: 12,
   },
-  fileChip: {
-    marginTop: 8,
-    marginRight: 4,
-    borderRadius: 6,
-    fontSize: 12,
+  metric: {},
+  metricLabel: {
+    fontSize: 10,
+    color: '#9ca3af',
+    fontWeight: 600,
+    textTransform: 'uppercase' as any,
+    letterSpacing: '0.05em',
+    marginBottom: 2,
   },
-  gradeInput: { width: 80 },
+  metricValue: { fontSize: 13, fontWeight: 700, color: DARK },
+
+  progressBar: { height: 5, borderRadius: 3, backgroundColor: '#f3f4f6' },
+  progressFill: {
+    background: `linear-gradient(90deg, ${CORAL} 0%, ${ORANGE} 100%)`,
+    borderRadius: 3,
+  },
+  progressFillDone: {
+    background: `linear-gradient(90deg, ${GREEN} 0%, #34d399 100%)`,
+    borderRadius: 3,
+  },
+
+  emptyText: {
+    fontSize: 13,
+    color: '#c4c8d0',
+    textAlign: 'center' as any,
+    padding: '40px 0',
+  },
+
+  // Submission card in dialog
   submissionCard: {
-    border: '1px solid #f0f0f0',
+    border: '1px solid rgba(0,0,0,0.08)',
     borderRadius: 10,
-    padding: theme.spacing(2),
-    marginBottom: theme.spacing(1.5),
+    padding: '14px 16px',
+    marginBottom: 12,
+    background: '#fafafa',
   },
   sectionLabel: {
-    fontSize: '11px',
+    fontSize: 10,
     fontWeight: 700,
     letterSpacing: '0.08em',
     textTransform: 'uppercase' as const,
@@ -157,16 +286,51 @@ const useStyles = makeStyles((theme: Theme) => ({
     marginBottom: 6,
     display: 'block',
   },
+  uploadZone: {
+    border: '2px dashed #e0e0e0',
+    borderRadius: 10,
+    padding: theme.spacing(3),
+    textAlign: 'center' as any,
+    cursor: 'pointer',
+    transition: 'border-color 0.2s',
+    '&:hover': { borderColor: CORAL },
+  },
+  fileChip: { marginTop: 8, marginRight: 4, borderRadius: 6, fontSize: 12 },
+  gradeInput: { width: 80 },
 }));
 
-// Build a 1–52 week array
 const WEEK_OPTIONS = Array.from({ length: 52 }, (_, i) => i + 1);
 
-const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  open: { bg: '#eff6ff', color: '#3b82f6' },
-  submitted: { bg: '#fff7ed', color: '#f59e0b' },
-  graded: { bg: '#f0fdf4', color: '#22c55e' },
+const STATUS_STYLES: Record<string, { bg: string; color: string }> = {
+  open: { bg: '#eff6ff', color: BLUE },
+  active: { bg: '#eff6ff', color: BLUE },
+  submitted: { bg: '#fff7ed', color: AMBER },
+  grading: { bg: '#fff7ed', color: AMBER },
+  graded: { bg: '#f0fdf4', color: GREEN },
+  completed: { bg: '#f0fdf4', color: GREEN },
   closed: { bg: '#f8f8f8', color: '#8a8f99' },
+  draft: { bg: 'rgba(0,0,0,0.05)', color: '#8a8f99' },
+};
+
+const TYPE_STYLES: Record<string, { bg: string; color: string }> = {
+  assignment: { bg: 'rgba(59,130,246,0.1)', color: BLUE },
+  exam: { bg: 'rgba(254,58,106,0.1)', color: CORAL },
+  quiz: { bg: 'rgba(139,92,246,0.1)', color: PURPLE },
+  project: { bg: 'rgba(16,185,129,0.1)', color: GREEN },
+};
+
+const getStatusStyle = (s: string) =>
+  STATUS_STYLES[s?.toLowerCase()] || { bg: '#f3f4f6', color: '#8a8f99' };
+const getTypeStyle = (t: string) =>
+  TYPE_STYLES[t?.toLowerCase()] || { bg: '#f3f4f6', color: '#8a8f99' };
+
+const isWeekUnlocked = (weekNumber: number, courseStartDate: string) => {
+  if (!courseStartDate) return true;
+  const start = parseISO(courseStartDate);
+  return !isBefore(
+    startOfDay(new Date()),
+    startOfDay(addWeeks(start, weekNumber - 1)),
+  );
 };
 
 const EMPTY_FORM = {
@@ -179,21 +343,9 @@ const EMPTY_FORM = {
   isMilestone: false,
 };
 
-/** Returns true if weekNumber is currently unlocked given courseStartDate */
-const isWeekUnlocked = (
-  weekNumber: number,
-  courseStartDate: string,
-): boolean => {
-  if (!courseStartDate) return true;
-  const startDate = parseISO(courseStartDate);
-  const weekUnlockDate = addWeeks(startDate, weekNumber - 1);
-  return !isBefore(startOfDay(new Date()), startOfDay(weekUnlockDate));
-};
-
 const TeacherAssignments = () => {
   const classes = useStyles();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const [tab, setTab] = useState(0);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
@@ -206,6 +358,7 @@ const TeacherAssignments = () => {
   const [uploading, setUploading] = useState(false);
   const [grades, setGrades] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<Record<string, string>>({});
+  const [query, setQuery] = useState('');
 
   const fetchAssignments = () => {
     get(
@@ -218,7 +371,6 @@ const TeacherAssignments = () => {
 
   useEffect(() => {
     fetchAssignments();
-    // Load courses for the dropdown
     get(
       remoteRoutes.coursesBase,
       (data: any[]) => setCourses(Array.isArray(data) ? data : []),
@@ -228,13 +380,8 @@ const TeacherAssignments = () => {
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
+    if (e.target.files)
       setAttachedFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
-    }
-  };
-
-  const removeFile = (index: number) => {
-    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleCreate = () => {
@@ -271,10 +418,11 @@ const TeacherAssignments = () => {
     get(
       `${remoteRoutes.assignments}/${assignment.id}/submissions`,
       (data: any[]) => {
-        setSubmissions(Array.isArray(data) ? data : []);
+        const list = Array.isArray(data) ? data : [];
+        setSubmissions(list);
         const g: Record<string, string> = {};
         const f: Record<string, string> = {};
-        (Array.isArray(data) ? data : []).forEach((s: any) => {
+        list.forEach((s: any) => {
           g[s.id] = s.score != null ? String(s.score) : '';
           f[s.id] = s.feedback || '';
         });
@@ -316,11 +464,15 @@ const TeacherAssignments = () => {
     );
   };
 
-  const filteredAssignments = assignments.filter((a) => {
-    if (tab === 1) return a.status === 'open';
-    if (tab === 2) return a.status === 'closed';
-    if (tab === 3) return a.isMilestone;
-    return true;
+  const filtered = assignments.filter((a) => {
+    const matchesTab =
+      tab === 0 ||
+      (tab === 1 && a.status === 'open') ||
+      (tab === 2 && a.status === 'closed') ||
+      (tab === 3 && a.isMilestone);
+    const matchesQuery =
+      !query || (a.title || '').toLowerCase().includes(query.toLowerCase());
+    return matchesTab && matchesQuery;
   });
 
   const openCount = assignments.filter((a) => a.status === 'open').length;
@@ -333,300 +485,261 @@ const TeacherAssignments = () => {
     <Layout>
       <div className={classes.root}>
         {/* Header */}
-        <div className={classes.header}>
+        <div className={classes.pageHeader}>
           <div>
-            <div className={classes.pageTitle}>Assignments</div>
-            <div className={classes.pageSubtitle}>
-              Create weekly assignments, upload resources, and manage student
-              submissions
+            <div className={classes.pageTitle}>Assessments</div>
+            <div className={classes.pageSub}>
+              Create and manage assessments for your classes
             </div>
           </div>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            className={classes.addButton}
+            className={classes.addBtn}
+            disableElevation
             onClick={() => setOpenNew(true)}
           >
-            New Assignment
+            Create Assessment
           </Button>
         </div>
 
         {/* Stats */}
-        <Grid container spacing={2} style={{ marginBottom: 24 }}>
+        <Grid container spacing={2} className={classes.statsRow}>
           {[
             {
               label: 'Total Assignments',
               value: assignments.length,
-              color: '#6366f1',
-              bg: '#eef2ff',
+              color: PURPLE,
+              bg: 'rgba(139,92,246,0.08)',
             },
             {
               label: 'Currently Open',
               value: openCount,
-              color: '#3b82f6',
-              bg: '#eff6ff',
+              color: BLUE,
+              bg: 'rgba(59,130,246,0.08)',
             },
             {
               label: 'Pending Grading',
               value: pendingGrading,
-              color: '#f59e0b',
-              bg: '#fff7ed',
+              color: CORAL,
+              bg: 'rgba(254,58,106,0.08)',
             },
             {
               label: 'Milestones',
               value: milestoneCount,
-              color: '#f59e0b',
-              bg: '#fff7ed',
+              color: AMBER,
+              bg: 'rgba(245,158,11,0.08)',
             },
           ].map((stat) => (
             <Grid item xs={6} sm={3} key={stat.label}>
-              <Card
-                style={{
-                  borderRadius: 12,
-                  padding: 20,
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 16,
-                  border: '1px solid #f0f0f0',
-                }}
-              >
+              <div className={classes.statCard}>
                 <div
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 10,
-                    background: stat.bg,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
+                  className={classes.statIconBox}
+                  style={{ background: stat.bg }}
                 >
-                  <AssignmentIcon style={{ color: stat.color, fontSize: 22 }} />
+                  <AssignmentIcon style={{ color: stat.color, fontSize: 20 }} />
                 </div>
                 <div>
-                  <div
-                    style={{
-                      fontSize: 28,
-                      fontWeight: 700,
-                      color: '#1f2025',
-                      lineHeight: 1,
-                      fontFamily: '"Plus Jakarta Sans", sans-serif',
-                    }}
-                  >
-                    {stat.value}
-                  </div>
-                  <div style={{ fontSize: 12, color: '#8a8f99', marginTop: 4 }}>
-                    {stat.label}
-                  </div>
+                  <div className={classes.statNum}>{stat.value}</div>
+                  <div className={classes.statLbl}>{stat.label}</div>
                 </div>
-              </Card>
+              </div>
             </Grid>
           ))}
         </Grid>
 
-        {/* Tabs */}
+        {/* Search + tabs */}
+        <div className={classes.toolbar}>
+          <div className={classes.searchBox}>
+            <SearchIcon style={{ fontSize: 18, color: '#9ca3af' }} />
+            <InputBase
+              placeholder="Search assessments..."
+              style={{ fontSize: 13, flex: 1 }}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+        </div>
+
         <Tabs
           value={tab}
           onChange={(_, v) => setTab(v)}
           className={classes.tabs}
-          indicatorColor="primary"
-          textColor="primary"
         >
-          <Tab label="All" style={{ textTransform: 'none', fontWeight: 600 }} />
-          <Tab
-            label="Open"
-            style={{ textTransform: 'none', fontWeight: 600 }}
-          />
-          <Tab
-            label="Closed"
-            style={{ textTransform: 'none', fontWeight: 600 }}
-          />
+          <Tab label="All" className={classes.tab} />
+          <Tab label="Open" className={classes.tab} />
+          <Tab label="Closed" className={classes.tab} />
           <Tab
             label={`Milestones (${milestoneCount})`}
-            style={{ textTransform: 'none', fontWeight: 600 }}
+            className={classes.tab}
           />
         </Tabs>
 
-        {/* Table */}
-        <Card className={classes.tableCard}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell className={classes.tableHeadCell}>
-                  Assignment
-                </TableCell>
-                <TableCell className={classes.tableHeadCell}>Week</TableCell>
-                <TableCell className={classes.tableHeadCell}>Course</TableCell>
-                <TableCell className={classes.tableHeadCell}>Hub</TableCell>
-                <TableCell className={classes.tableHeadCell}>
-                  Due Date
-                </TableCell>
-                <TableCell className={classes.tableHeadCell}>
-                  Submissions
-                </TableCell>
-                <TableCell className={classes.tableHeadCell}>Status</TableCell>
-                <TableCell className={classes.tableHeadCell}>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredAssignments.map((a) => {
-                const sc = STATUS_COLORS[a.status] || {
-                  bg: '#f8f8f8',
-                  color: '#8a8f99',
-                };
-                const submittedPct =
-                  a.totalStudents > 0
-                    ? Math.round(
-                        ((a.submissionsCount || 0) / a.totalStudents) * 100,
-                      )
-                    : 0;
-                const unlocked = a.courseStartDate
-                  ? isWeekUnlocked(a.weekNumber, a.courseStartDate)
-                  : true;
-                return (
-                  <TableRow key={a.id} hover>
-                    <TableCell className={classes.tableCell}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          flexWrap: 'wrap',
-                        }}
+        {/* Assessment cards */}
+        {filtered.length === 0 ? (
+          <Typography className={classes.emptyText}>
+            No assessments found. Click "Create Assessment" to get started.
+          </Typography>
+        ) : (
+          filtered.map((a) => {
+            const statusStyle = getStatusStyle(a.status);
+            const typeStyle = getTypeStyle(a.type || 'assignment');
+            const submittedPct =
+              a.totalStudents > 0
+                ? Math.round(
+                    ((a.submissionsCount || 0) / a.totalStudents) * 100,
+                  )
+                : 0;
+            const isDone = submittedPct >= 100;
+            const unlocked = a.courseStartDate
+              ? isWeekUnlocked(a.weekNumber, a.courseStartDate)
+              : true;
+
+            return (
+              <div key={a.id} className={classes.assessmentCard}>
+                <div className={classes.cardTopRow}>
+                  <div className={classes.badgesRow}>
+                    {(a.courseCode || a.course?.code) && (
+                      <span className={classes.courseCodeBadge}>
+                        {a.courseCode || a.course?.code}
+                      </span>
+                    )}
+                    <span
+                      className={classes.typeBadge}
+                      style={{
+                        background: typeStyle.bg,
+                        color: typeStyle.color,
+                      }}
+                    >
+                      {(a.type || 'Assignment').charAt(0).toUpperCase() +
+                        (a.type || 'Assignment').slice(1)}
+                    </span>
+                    <span
+                      className={classes.statusBadge}
+                      style={{
+                        background: statusStyle.bg,
+                        color: statusStyle.color,
+                      }}
+                    >
+                      {(a.status || 'Open').charAt(0).toUpperCase() +
+                        (a.status || 'Open').slice(1)}
+                    </span>
+                  </div>
+                  <div className={classes.actionsRow}>
+                    {isDone && (
+                      <Button
+                        size="small"
+                        variant="contained"
+                        className={classes.exportBtn}
+                        disableElevation
                       >
-                        <strong>{a.title}</strong>
-                        {a.isMilestone && (
-                          <span className={classes.milestoneBadge}>
-                            <StarIcon style={{ fontSize: 10 }} /> Milestone
-                          </span>
-                        )}
-                        {!unlocked && (
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 3,
-                              fontSize: 10,
-                              color: '#8a8f99',
-                            }}
-                          >
-                            <LockIcon style={{ fontSize: 10 }} /> Locked
-                          </span>
-                        )}
-                      </div>
-                      {a.filesCount > 0 && (
-                        <span style={{ fontSize: 11, color: '#8a8f99' }}>
-                          <AttachFileIcon
-                            style={{ fontSize: 11, verticalAlign: 'middle' }}
-                          />{' '}
-                          {a.filesCount} file(s)
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className={classes.tableCell}>
-                      {a.weekNumber ? (
-                        <span className={classes.weekBadge}>
-                          Wk {a.weekNumber}
-                        </span>
-                      ) : (
-                        <span style={{ color: '#c0c4ce' }}>—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className={classes.tableCell}>
-                      {a.course}
-                    </TableCell>
-                    <TableCell className={classes.tableCell}>{a.hub}</TableCell>
-                    <TableCell className={classes.tableCell}>
+                        Export
+                      </Button>
+                    )}
+                    {!isDone && (a.submissionsCount || 0) > 0 && (
+                      <Button
+                        size="small"
+                        variant="contained"
+                        className={classes.gradeBtn}
+                        disableElevation
+                        startIcon={<GradeIcon style={{ fontSize: 13 }} />}
+                        onClick={() => handleViewSubmissions(a)}
+                      >
+                        Grade Submissions
+                      </Button>
+                    )}
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      className={classes.editBtn}
+                      startIcon={<EditIcon style={{ fontSize: 13 }} />}
+                      onClick={() => handleViewSubmissions(a)}
+                    >
+                      Edit
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <span className={classes.assessmentTitle}>{a.title}</span>
+                  {a.isMilestone && (
+                    <span className={classes.milestoneBadge}>
+                      <StarIcon style={{ fontSize: 10 }} /> Milestone
+                    </span>
+                  )}
+                  {a.weekNumber && (
+                    <span className={classes.weekBadge}>Wk {a.weekNumber}</span>
+                  )}
+                  {!unlocked && (
+                    <span
+                      style={{ fontSize: 10, color: '#8a8f99', marginLeft: 6 }}
+                    >
+                      <LockIcon
+                        style={{ fontSize: 10, verticalAlign: 'middle' }}
+                      />{' '}
+                      Locked
+                    </span>
+                  )}
+                </div>
+
+                <div className={classes.assessmentCourse}>
+                  {typeof a.course === 'object' ? a.course?.title : a.course}
+                  {a.hub &&
+                    ` · ${
+                      typeof a.hub === 'object'
+                        ? a.hub?.name || a.hub?.title
+                        : a.hub
+                    }`}
+                </div>
+
+                <div className={classes.metricsRow}>
+                  <div className={classes.metric}>
+                    <div className={classes.metricLabel}>Due Date</div>
+                    <div className={classes.metricValue}>
                       {a.dueDate
                         ? format(parseISO(a.dueDate), 'MMM d, yyyy')
                         : '—'}
-                    </TableCell>
-                    <TableCell className={classes.tableCell}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
-                      >
-                        <LinearProgress
-                          variant="determinate"
-                          value={submittedPct}
-                          style={{
-                            flex: 1,
-                            height: 5,
-                            borderRadius: 3,
-                            backgroundColor: '#f0f0f0',
-                          }}
-                        />
-                        <span
-                          style={{
-                            fontSize: 12,
-                            color: '#8a8f99',
-                            minWidth: 40,
-                          }}
-                        >
-                          {a.submissionsCount || 0}/{a.totalStudents || 0}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className={classes.tableCell}>
-                      <Chip
-                        label={a.status || 'open'}
-                        size="small"
-                        style={{
-                          backgroundColor: sc.bg,
-                          color: sc.color,
-                          fontWeight: 600,
-                          fontSize: 11,
-                          borderRadius: 6,
-                          height: 22,
-                          border: `1px solid ${sc.color}30`,
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell className={classes.tableCell}>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<GradeIcon style={{ fontSize: 14 }} />}
-                        onClick={() => handleViewSubmissions(a)}
-                        style={{
-                          borderRadius: 6,
-                          fontSize: 12,
-                          textTransform: 'none',
-                          borderColor: '#e0e0e0',
-                          color: '#1f2025',
-                        }}
-                      >
-                        Submissions
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {filteredAssignments.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={8}
-                    className={classes.tableCell}
-                    style={{
-                      textAlign: 'center',
-                      color: '#8a8f99',
-                      padding: 40,
-                    }}
-                  >
-                    No assignments yet. Click "New Assignment" to create one.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </Card>
+                    </div>
+                  </div>
+                  <div className={classes.metric}>
+                    <div className={classes.metricLabel}>Total Marks</div>
+                    <div className={classes.metricValue}>
+                      {a.maxScore || a.totalMarks || 100}
+                    </div>
+                  </div>
+                  <div className={classes.metric}>
+                    <div className={classes.metricLabel}>Submissions</div>
+                    <div className={classes.metricValue}>
+                      {a.submissionsCount || 0}/{a.totalStudents || 0}
+                    </div>
+                  </div>
+                  <div className={classes.metric}>
+                    <div className={classes.metricLabel}>Completion</div>
+                    <div
+                      className={classes.metricValue}
+                      style={{ color: isDone ? GREEN : CORAL }}
+                    >
+                      {submittedPct}%
+                    </div>
+                  </div>
+                </div>
 
-        {/* ── Create assignment dialog ── */}
+                <LinearProgress
+                  variant="determinate"
+                  value={submittedPct}
+                  className={classes.progressBar}
+                  classes={{
+                    bar: isDone
+                      ? classes.progressFillDone
+                      : classes.progressFill,
+                  }}
+                />
+              </div>
+            );
+          })
+        )}
+
+        {/* ── Create Assignment Dialog ── */}
         <Dialog
           open={openNew}
           onClose={() => setOpenNew(false)}
@@ -640,14 +753,7 @@ const TeacherAssignments = () => {
               justifyContent: 'space-between',
             }}
           >
-            <span
-              style={{
-                fontWeight: 700,
-                fontFamily: '"Plus Jakarta Sans", sans-serif',
-              }}
-            >
-              Create New Assignment
-            </span>
+            <span style={{ fontWeight: 700 }}>Create New Assessment</span>
             <IconButton size="small" onClick={() => setOpenNew(false)}>
               <CloseIcon fontSize="small" />
             </IconButton>
@@ -655,7 +761,6 @@ const TeacherAssignments = () => {
           <Divider />
           <DialogContent style={{ paddingTop: 20 }}>
             <Grid container spacing={2}>
-              {/* Basic info */}
               <Grid item xs={12}>
                 <TextField
                   label="Assignment Title *"
@@ -705,11 +810,8 @@ const TeacherAssignments = () => {
                   ))}
                 </TextField>
               </Grid>
-
-              {/* Dates + marks */}
               <Grid item xs={12}>
-                <Divider style={{ margin: '4px 0 12px' }} />
-                <span className={classes.sectionLabel}>Details</span>
+                <Divider style={{ margin: '4px 0 8px' }} />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -750,7 +852,6 @@ const TeacherAssignments = () => {
                   multiline
                   minRows={3}
                   size="small"
-                  helperText="Line breaks are preserved exactly as typed."
                 />
               </Grid>
               <Grid item xs={12}>
@@ -767,35 +868,23 @@ const TeacherAssignments = () => {
                   }
                   label={
                     <span
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: '#1f2025',
-                      }}
+                      style={{ fontSize: 13, fontWeight: 600, color: DARK }}
                     >
-                      Milestone Assignment
-                      <span
-                        style={{
-                          fontWeight: 400,
-                          color: '#8a8f99',
-                          marginLeft: 6,
-                        }}
-                      >
+                      Milestone Assignment{' '}
+                      <span style={{ fontWeight: 400, color: '#8a8f99' }}>
                         — requires PDF or link submission
                       </span>
                     </span>
                   }
                 />
               </Grid>
-
-              {/* File upload */}
               <Grid item xs={12}>
                 <span className={classes.sectionLabel}>Attach resources</span>
                 <div
                   className={classes.uploadZone}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <CloudUploadIcon style={{ fontSize: 36, color: '#c0c4ce' }} />
+                  <CloudUploadIcon style={{ fontSize: 34, color: '#c0c4ce' }} />
                   <Typography
                     style={{ color: '#8a8f99', fontSize: 13, marginTop: 4 }}
                   >
@@ -821,7 +910,11 @@ const TeacherAssignments = () => {
                       <Chip
                         key={i}
                         label={f.name}
-                        onDelete={() => removeFile(i)}
+                        onDelete={() =>
+                          setAttachedFiles((prev) =>
+                            prev.filter((_, j) => j !== i),
+                          )
+                        }
                         deleteIcon={<DeleteIcon />}
                         className={classes.fileChip}
                         icon={
@@ -854,21 +947,21 @@ const TeacherAssignments = () => {
               variant="contained"
               onClick={handleCreate}
               disabled={uploading}
+              disableElevation
               style={{
-                background: 'linear-gradient(90deg, #fe3a6a 0%, #fe8c45 100%)',
+                background: CORAL,
                 color: '#fff',
                 borderRadius: 8,
                 textTransform: 'none',
                 fontWeight: 700,
-                boxShadow: 'none',
               }}
             >
-              {uploading ? 'Creating...' : 'Create Assignment'}
+              {uploading ? 'Creating...' : 'Create Assessment'}
             </Button>
           </DialogActions>
         </Dialog>
 
-        {/* ── Submissions & grading dialog ── */}
+        {/* ── Submissions & Grading Dialog ── */}
         <Dialog
           open={openSubmissions}
           onClose={() => setOpenSubmissions(false)}
@@ -883,12 +976,7 @@ const TeacherAssignments = () => {
             }}
           >
             <div>
-              <span
-                style={{
-                  fontWeight: 700,
-                  fontFamily: '"Plus Jakarta Sans", sans-serif',
-                }}
-              >
+              <span style={{ fontWeight: 700 }}>
                 Submissions — {selectedAssignment?.title}
               </span>
               <div
@@ -899,11 +987,10 @@ const TeacherAssignments = () => {
                   marginTop: 2,
                 }}
               >
-                {selectedAssignment?.course} · {selectedAssignment?.hub} Hub
+                {selectedAssignment?.course}{' '}
                 {selectedAssignment?.weekNumber &&
-                  ` · Week ${selectedAssignment.weekNumber}`}
-                {selectedAssignment?.isMilestone && ' · Milestone'}
-                {' · '}
+                  `· Week ${selectedAssignment.weekNumber}`}{' '}
+                {selectedAssignment?.isMilestone && '· Milestone'} ·{' '}
                 {submissions.length} submitted
               </div>
             </div>
@@ -922,15 +1009,11 @@ const TeacherAssignments = () => {
               </Box>
             ) : (
               submissions.map((sub) => (
-                <Card key={sub.id} className={classes.submissionCard}>
+                <div key={sub.id} className={classes.submissionCard}>
                   <Grid container spacing={2} alignItems="flex-start">
                     <Grid item xs={12} sm={4}>
                       <Typography
-                        style={{
-                          fontWeight: 700,
-                          fontSize: 14,
-                          color: '#1f2025',
-                        }}
+                        style={{ fontWeight: 700, fontSize: 14, color: DARK }}
                       >
                         {sub.studentName}
                       </Typography>
@@ -940,7 +1023,6 @@ const TeacherAssignments = () => {
                           ? format(parseISO(sub.submittedAt), 'MMM d, h:mm a')
                           : '—'}
                       </Typography>
-                      {/* File submission */}
                       {sub.fileUrl && (
                         <Button
                           size="small"
@@ -952,14 +1034,13 @@ const TeacherAssignments = () => {
                             textTransform: 'none',
                             fontSize: 12,
                             marginTop: 4,
-                            color: '#fe3a6a',
+                            color: CORAL,
                             padding: 0,
                           }}
                         >
                           View PDF
                         </Button>
                       )}
-                      {/* Link submission */}
                       {sub.link && (
                         <Button
                           size="small"
@@ -970,21 +1051,20 @@ const TeacherAssignments = () => {
                             textTransform: 'none',
                             fontSize: 12,
                             marginTop: 4,
-                            color: '#3b82f6',
+                            color: BLUE,
                             padding: 0,
                           }}
                         >
                           Open Link
                         </Button>
                       )}
-                      {/* Text submission */}
                       {sub.text && (
                         <Typography
                           style={{
                             fontSize: 12,
                             color: '#5a5e6b',
                             marginTop: 6,
-                            background: '#f8f9fa',
+                            background: '#f5f5f5',
                             borderRadius: 6,
                             padding: '6px 10px',
                           }}
@@ -1040,14 +1120,13 @@ const TeacherAssignments = () => {
                         size="small"
                         variant="contained"
                         onClick={() => handleSaveGrade(sub.id)}
+                        disableElevation
                         style={{
-                          background:
-                            'linear-gradient(90deg, #fe3a6a 0%, #fe8c45 100%)',
+                          background: CORAL,
                           color: '#fff',
                           borderRadius: 6,
                           textTransform: 'none',
                           fontSize: 12,
-                          boxShadow: 'none',
                           whiteSpace: 'nowrap',
                         }}
                       >
@@ -1055,7 +1134,7 @@ const TeacherAssignments = () => {
                       </Button>
                     </Grid>
                   </Grid>
-                </Card>
+                </div>
               ))
             )}
           </DialogContent>

@@ -8,8 +8,8 @@ import XTextInput from '../../../components/inputs/XTextInput';
 import XCheckBoxInput from '../../../components/inputs/XCheckBoxInput';
 import { remoteRoutes } from '../../../data/constants';
 import { XRemoteSelect } from '../../../components/inputs/XRemoteSelect';
-import { handleSubmission, ISubmission } from '../../../utils/formHelpers';
 import { comboParser } from '../../../components/inputs/inputHelpers';
+import { handleSubmission, ISubmission } from '../../../utils/formHelpers';
 import { del, get } from '../../../utils/ajax';
 import Toast from '../../../utils/Toast';
 import XComboInput from '../../../components/inputs/XComboInput';
@@ -25,42 +25,56 @@ interface IProps {
 }
 
 const schema = yup.object().shape({
-  password: reqString.min(8),
   contact: reqObject,
+  username: reqString,
+  password: reqString.min(8),
   roles: reqArray,
 });
 
 const editSchema = yup.object().shape({
-  password: yup.string().min(8),
+  password: yup
+    .string()
+    .nullable()
+    .optional()
+    .test(
+      'min-if-set',
+      'Password must be at least 8 characters',
+      (val) => !val || val.length >= 8,
+    ),
   roles: reqArray,
 });
+
 const initialValues = {
   contact: null,
-  password: null,
+  username: '',
+  password: '',
   roles: [],
   isActive: true,
 };
+
 const UserEditor = ({ data, isNew, done, onDeleted, onCancel }: IProps) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [userRoles, setUserRoles] = useState<string[]>([]);
 
   useEffect(() => {
     get(remoteRoutes.roles, (resp: IRoles[]) => {
-      const active = resp
-        .filter((it: IRoles) => it.isActive)
-        .map((it: IRoles) => it.role);
+      const active = Array.isArray(resp)
+        ? resp.filter((it) => it.isActive).map((it) => it.role)
+        : [];
       setUserRoles(active);
     });
   }, []);
 
   function handleSubmit(values: any, actions: FormikHelpers<any>) {
     const toSave: any = {
-      ...values,
-      contactId: values.contact.id,
-      password: values.password,
+      contactId: Number(values.contact?.id),
+      username: values.username,
+      password: values.password || undefined,
       roles: cleanComboValue(values.roles),
       isActive: values.isActive,
     };
+    if (!isNew) toSave.id = data.id;
+
     const submission: ISubmission = {
       url: remoteRoutes.users,
       values: toSave,
@@ -75,15 +89,12 @@ const UserEditor = ({ data, isNew, done, onDeleted, onCancel }: IProps) => {
     setLoading(true);
     del(
       `${remoteRoutes.users}/${data.id}`,
-      (dt) => {
-        console.log('Delete response', dt);
+      () => {
         Toast.success('Operation succeeded');
         onDeleted(data);
       },
       undefined,
-      () => {
-        setLoading(false);
-      },
+      () => setLoading(false),
     );
   }
 
@@ -97,20 +108,29 @@ const UserEditor = ({ data, isNew, done, onDeleted, onCancel }: IProps) => {
       onCancel={onCancel}
     >
       <Grid spacing={1} container>
-        <Grid item xs={12}>
-          {isNew && (
-            <XRemoteSelect
-              name="contact"
-              label="Person"
-              filter={{
-                skipUsers: true,
-              }}
-              remote={remoteRoutes.contactsPeopleCombo}
-              parser={comboParser}
-              variant="outlined"
-            />
-          )}
-        </Grid>
+        {isNew && (
+          <>
+            <Grid item xs={12}>
+              <XRemoteSelect
+                name="contact"
+                label="Person"
+                filter={{ skipUsers: true }}
+                remote={remoteRoutes.contactsPeopleCombo}
+                parser={comboParser}
+                variant="outlined"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <XTextInput
+                name="username"
+                label="Username (email)"
+                type="email"
+                variant="outlined"
+                autoComplete="off"
+              />
+            </Grid>
+          </>
+        )}
         <Grid item xs={12}>
           <XComboInput
             name="roles"
@@ -123,18 +143,16 @@ const UserEditor = ({ data, isNew, done, onDeleted, onCancel }: IProps) => {
         <Grid item xs={12}>
           <XTextInput
             name="password"
-            label="Password"
+            label={
+              isNew ? 'Password' : 'New Password (leave blank to keep current)'
+            }
             type="password"
-            value={'Hello'}
             variant="outlined"
-            autoComplete="off"
+            autoComplete="new-password"
           />
         </Grid>
         <Grid item xs={12}>
-          <XCheckBoxInput
-            name="isActive"
-            label="Do you want to activate this user?"
-          />
+          <XCheckBoxInput name="isActive" label="Activate this user account" />
         </Grid>
       </Grid>
     </XForm>

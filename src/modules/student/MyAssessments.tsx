@@ -20,6 +20,8 @@ import GetAppIcon from '@material-ui/icons/GetApp';
 import { remoteRoutes } from '../../data/constants';
 import { get } from '../../utils/ajax';
 
+const CORAL = '#fe3a6a';
+
 const tabs = [
   'All Results',
   'MA: Missed Assessments',
@@ -42,12 +44,22 @@ const MyAssessments = () => {
   const [tab, setTab] = useState(0);
 
   useEffect(() => {
+    let mounted = true;
     get(
       remoteRoutes.examResults,
-      (data: any[]) => setResults(data || []),
-      () => setResults([]),
-      () => setLoading(false),
+      (data: any) => {
+        if (mounted) setResults(Array.isArray(data) ? data : []);
+      },
+      () => {
+        if (mounted) setResults([]);
+      },
+      () => {
+        if (mounted) setLoading(false);
+      },
     );
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const gpa = results.length
@@ -65,7 +77,7 @@ const MyAssessments = () => {
           <span style={{ margin: '0 6px', color: '#c4c8d0' }}>›</span>
           <span>Students</span>
           <span style={{ margin: '0 6px', color: '#c4c8d0' }}>›</span>
-          <span style={{ color: '#fe3a6a' }}>Results</span>
+          <span style={{ color: CORAL }}>Results</span>
         </Box>
 
         {/* Header */}
@@ -85,8 +97,8 @@ const MyAssessments = () => {
             variant="outlined"
             startIcon={<GetAppIcon />}
             style={{
-              borderColor: '#fe3a6a',
-              color: '#fe3a6a',
+              borderColor: CORAL,
+              color: CORAL,
               textTransform: 'none',
               fontWeight: 600,
             }}
@@ -99,7 +111,7 @@ const MyAssessments = () => {
         <Tabs
           value={tab}
           onChange={(_e, v) => setTab(v)}
-          TabIndicatorProps={{ style: { backgroundColor: '#fe3a6a' } }}
+          TabIndicatorProps={{ style: { backgroundColor: CORAL } }}
           style={{ marginBottom: 16 }}
         >
           {tabs.map((t, i) => (
@@ -109,7 +121,7 @@ const MyAssessments = () => {
               style={{
                 textTransform: 'none',
                 fontWeight: tab === i ? 600 : 400,
-                color: tab === i ? '#fe3a6a' : '#5a5e6b',
+                color: tab === i ? CORAL : '#5a5e6b',
                 fontSize: 13,
               }}
             />
@@ -117,13 +129,11 @@ const MyAssessments = () => {
         </Tabs>
 
         {/* GPA row */}
-        <Box
-          display="flex"
-          justifyContent="flex-end"
-          mb={1}
-          style={{ gap: 24 }}
-        >
-          <Typography variant="body2" style={{ color: '#5a5e6b' }}>
+        <Box display="flex" justifyContent="flex-end" mb={1}>
+          <Typography
+            variant="body2"
+            style={{ color: '#5a5e6b', marginRight: 24 }}
+          >
             GPA: <strong style={{ color: '#1f2025' }}>{gpa}</strong>
           </Typography>
           <Typography variant="body2" style={{ color: '#5a5e6b' }}>
@@ -169,7 +179,7 @@ const MyAssessments = () => {
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={8} align="center" style={{ padding: 40 }}>
-                    <CircularProgress size={28} style={{ color: '#fe3a6a' }} />
+                    <CircularProgress size={28} style={{ color: CORAL }} />
                   </TableCell>
                 </TableRow>
               ) : results.length === 0 ? (
@@ -212,82 +222,6 @@ const MyAssessments = () => {
             </TableBody>
           </Table>
         </TableContainer>
-
-        {/* Pagination */}
-        {results.length > 0 && (
-          <Box
-            display="flex"
-            alignItems="center"
-            justifyContent="space-between"
-            mt={2}
-            style={{ fontSize: 13, color: '#5a5e6b' }}
-          >
-            <Box display="flex" alignItems="center" style={{ gap: 8 }}>
-              <span
-                style={{
-                  width: 28,
-                  height: 28,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '1px solid rgba(0,0,0,0.12)',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  fontSize: 16,
-                }}
-              >
-                ‹
-              </span>
-              <span
-                style={{
-                  width: 28,
-                  height: 28,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: '#fe3a6a',
-                  color: '#fff',
-                  borderRadius: 6,
-                  fontSize: 13,
-                  fontWeight: 600,
-                }}
-              >
-                1
-              </span>
-              <span
-                style={{
-                  width: 28,
-                  height: 28,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '1px solid rgba(0,0,0,0.12)',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  fontSize: 16,
-                }}
-              >
-                ›
-              </span>
-              <span style={{ marginLeft: 8 }}>
-                Go to:{' '}
-                <input
-                  defaultValue="1"
-                  style={{
-                    width: 40,
-                    border: '1px solid rgba(0,0,0,0.15)',
-                    borderRadius: 4,
-                    padding: '2px 6px',
-                    fontSize: 12,
-                    textAlign: 'center',
-                  }}
-                />
-              </span>
-              <span>| 20/page</span>
-            </Box>
-            <span>Total {results.length}</span>
-          </Box>
-        )}
       </Box>
     </Layout>
   );

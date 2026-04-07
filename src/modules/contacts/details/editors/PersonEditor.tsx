@@ -3,20 +3,16 @@ import * as yup from 'yup';
 import { FormikHelpers } from 'formik';
 import Grid from '@material-ui/core/Grid';
 import { useDispatch } from 'react-redux';
-import { getDate, getMonth, parseISO } from 'date-fns';
 import { reqString } from '../../../../data/validations';
 import {
-  ageCategories,
   civilStatusCategories,
   genderCategories,
   salutationCategories,
 } from '../../../../data/comboCategories';
 import XForm from '../../../../components/forms/XForm';
 import XTextInput from '../../../../components/inputs/XTextInput';
-import {
-  hasValue,
-  toOptions,
-} from '../../../../components/inputs/inputHelpers';
+import XDateInput from '../../../../components/inputs/XDateInput';
+import { toOptions } from '../../../../components/inputs/inputHelpers';
 
 import { remoteRoutes } from '../../../../data/constants';
 import { crmConstants } from '../../../../data/contacts/reducer';
@@ -25,7 +21,6 @@ import Toast from '../../../../utils/Toast';
 import XRadioInput from '../../../../components/inputs/XRadioInput';
 import { IPerson } from '../../types';
 import XSelectInput from '../../../../components/inputs/XSelectInput';
-import { getDayList, getMonthsList } from '../../../../utils/dateHelpers';
 
 interface IProps {
   data: IPerson;
@@ -37,12 +32,8 @@ const schema = yup.object().shape({
   firstName: reqString,
   lastName: reqString,
   gender: reqString,
-
-  birthDay: reqString,
-  birthMonth: reqString,
+  dateOfBirth: reqString,
   civilStatus: reqString,
-
-  ageGroup: reqString,
 });
 
 const PersonEditor = ({ data, done }: IProps) => {
@@ -56,10 +47,10 @@ const PersonEditor = ({ data, done }: IProps) => {
       middleName: values.middleName,
       lastName: values.lastName,
       gender: values.gender,
-
       civilStatus: values.civilStatus,
-      dateOfBirth: `1800-${values.birthMonth}-${values.birthDay}T00:00:00.000Z`,
-      ageGroup: values.ageGroup,
+      dateOfBirth: values.dateOfBirth
+        ? new Date(values.dateOfBirth).toISOString()
+        : undefined,
       placeOfWork: values.placeOfWork,
     };
     put(
@@ -82,18 +73,8 @@ const PersonEditor = ({ data, done }: IProps) => {
   }
 
   const { dateOfBirth } = data;
-  const initialData: any = { ...data, birthDay: null, birthMonth: null };
-  if (hasValue(dateOfBirth)) {
-    try {
-      const dt: Date = parseISO(`${dateOfBirth}`);
-      initialData.birthDay =
-        getDate(dt) < 10 ? `0${getDate(dt)}` : `${getDate(dt)}`;
-      initialData.birthMonth =
-        getMonth(dt) < 10 ? `0${getMonth(dt) + 1}` : `${getMonth(dt) + 1}`;
-    } catch (e) {
-      console.log('invalid date');
-    }
-  }
+  const dobISO = dateOfBirth ? new Date(dateOfBirth).toISOString() : null;
+  const initialData: any = { ...data, dateOfBirth: dobISO };
 
   return (
     <XForm
@@ -155,34 +136,15 @@ const PersonEditor = ({ data, done }: IProps) => {
             margin="none"
           />
         </Grid>
-        <Grid item xs={12} md={4}>
-          <XSelectInput
-            name="ageGroup"
-            label="Age Group"
-            options={toOptions(ageCategories)}
+        <Grid item xs={12} md={6}>
+          <XDateInput
+            name="dateOfBirth"
+            label="Date of Birth"
             variant="outlined"
             margin="none"
+            disableFuture
           />
         </Grid>
-        <Grid item xs={6} md={4}>
-          <XSelectInput
-            name="birthMonth"
-            label="Birth Month"
-            options={toOptions(getMonthsList())}
-            variant="outlined"
-            margin="none"
-          />
-        </Grid>
-        <Grid item xs={6} md={4}>
-          <XSelectInput
-            name="birthDay"
-            label="Birth Day"
-            options={toOptions(getDayList())}
-            variant="outlined"
-            margin="none"
-          />
-        </Grid>
-
         <Grid item xs={12} md={6}>
           <XTextInput
             name="placeOfWork"

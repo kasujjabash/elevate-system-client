@@ -8,7 +8,7 @@ import PeopleIcon from '@material-ui/icons/People';
 import SettingsIcon from '@material-ui/icons/Settings';
 import BubbleChartIcon from '@material-ui/icons/BubbleChart';
 import AssessmentIcon from '@material-ui/icons/Assessment';
-import GradeIcon from '@material-ui/icons/Grade';
+
 import PlaylistAddCheckIcon from '@material-ui/icons/PlaylistAddCheck';
 import NotificationsActiveIcon from '@material-ui/icons/NotificationsActive';
 
@@ -18,16 +18,22 @@ import LiveTvIcon from '@material-ui/icons/LiveTv';
 import DateRangeIcon from '@material-ui/icons/DateRange';
 import ForumIcon from '@material-ui/icons/Forum';
 import AssignmentTurnedInIcon from '@material-ui/icons/AssignmentTurnedIn';
-import LibraryBooksIcon from '@material-ui/icons/LibraryBooks';
 import PlayCircleOutlineIcon from '@material-ui/icons/PlayCircleOutline';
 import ExitToAppIcon from '@material-ui/icons/ExitToApp';
 import SupervisorAccountIcon from '@material-ui/icons/SupervisorAccount';
 import BusinessIcon from '@material-ui/icons/Business';
+import BarChartIcon from '@material-ui/icons/BarChart';
+import FolderOpenIcon from '@material-ui/icons/FolderOpen';
 import Divider from '@material-ui/core/Divider';
 import { useHistory, useLocation } from 'react-router-dom';
 import { createStyles, makeStyles, Theme, withStyles } from '@material-ui/core';
 import { useSelector, useDispatch } from 'react-redux';
-import { hasAnyRole, isStudent } from '../../data/appRoles';
+import {
+  hasAnyRole,
+  isStudent,
+  isHubManager,
+  isTrainer,
+} from '../../data/appRoles';
 import { appPermissions, localRoutes } from '../../data/constants';
 import { IState } from '../../data/types';
 import { handleLogout } from '../../data/coreActions';
@@ -43,11 +49,6 @@ interface IAppRoute {
 const studentRoutes: IAppRoute[] = [
   { name: 'Home', route: localRoutes.dashboard, icon: HomeIcon },
   { name: 'My Courses', route: localRoutes.myCourses, icon: MenuBookIcon },
-  {
-    name: 'Course Catalog',
-    route: localRoutes.studentCourses,
-    icon: LibraryBooksIcon,
-  },
   { name: 'Live Classes', route: localRoutes.myClasses, icon: LiveTvIcon },
   { name: 'My Timetable', route: localRoutes.myTimetable, icon: DateRangeIcon },
   {
@@ -105,12 +106,6 @@ const staffRoutes: IAppRoute[] = [
     icon: PlaylistAddCheckIcon,
   },
   {
-    requiredRoles: [appPermissions.roleClassView, appPermissions.roleClassEdit],
-    name: 'Exams',
-    route: localRoutes.exams,
-    icon: GradeIcon,
-  },
-  {
     requiredRoles: [
       appPermissions.roleCourseView,
       appPermissions.roleCourseEdit,
@@ -136,6 +131,52 @@ const staffRoutes: IAppRoute[] = [
     name: 'Hubs',
     route: localRoutes.hubs,
     icon: BusinessIcon,
+  },
+];
+
+// ── Hub Manager: own-hub students, timetable, attendance, announcements ──────
+const hubManagerRoutes: IAppRoute[] = [
+  { name: 'Dashboard', route: localRoutes.dashboard, icon: AppsIcon },
+  { name: 'Students', route: localRoutes.students, icon: PeopleIcon },
+  { name: 'Timetable', route: localRoutes.timetable, icon: DateRangeIcon },
+  { name: 'Attendance', route: localRoutes.attendance, icon: AssessmentIcon },
+  {
+    name: 'Announcements',
+    route: localRoutes.adminAnnouncements,
+    icon: NotificationsActiveIcon,
+  },
+];
+
+// ── Trainer: instructor portal nav ───────────────────────────────────────────
+const trainerRoutes: IAppRoute[] = [
+  { name: 'Home', route: localRoutes.dashboard, icon: HomeIcon },
+  {
+    name: 'My Classes',
+    route: localRoutes.trainerCourses,
+    icon: BubbleChartIcon,
+  },
+  { name: 'Lectures', route: localRoutes.trainerLectures, icon: MenuBookIcon },
+  { name: 'My Schedule', route: localRoutes.myTimetable, icon: DateRangeIcon },
+  {
+    name: 'Assessments',
+    route: localRoutes.teacherAssignments,
+    icon: PlaylistAddCheckIcon,
+  },
+  { name: 'Students', route: localRoutes.trainerStudents, icon: PeopleIcon },
+  {
+    name: 'Reports & Analytics',
+    route: localRoutes.trainerAnalytics,
+    icon: BarChartIcon,
+  },
+  {
+    name: 'Chats / Inquiries',
+    route: localRoutes.chatsInquiries,
+    icon: ForumIcon,
+  },
+  {
+    name: 'Resources',
+    route: localRoutes.trainerResources,
+    icon: FolderOpenIcon,
   },
 ];
 
@@ -207,6 +248,8 @@ const NavMenu = (props: any) => {
   const dispatch = useDispatch();
   const user = useSelector((state: IState) => state.core.user);
   const student = isStudent(user);
+  const hubManager = isHubManager(user);
+  const trainer = isTrainer(user);
 
   const onClick = (path: string) => () => {
     history.push(path);
@@ -304,71 +347,119 @@ const NavMenu = (props: any) => {
     );
   }
 
-  // ── Staff sidebar ──────────────────────────────────────────────────────────
+  // Helper: render a simple (no permission check) route list
+  const renderRouteList = (routes: IAppRoute[]) =>
+    routes.map((it) => {
+      const Icon = it.icon;
+      const selected = isSelected(it.route!);
+      return (
+        <StyledListItem
+          button
+          key={it.name}
+          onClick={onClick(it.route!)}
+          selected={selected}
+          className={classes.item}
+          classes={{ selected: classes.selectedItem }}
+        >
+          <ListItemIcon
+            className={selected ? classes.iconSelected : classes.icon}
+          >
+            <Icon style={{ fontSize: 19 }} />
+          </ListItemIcon>
+          <ListItemText
+            primary={it.name}
+            className={selected ? classes.textSelected : classes.text}
+          />
+        </StyledListItem>
+      );
+    });
+
+  const BottomActions = (
+    <>
+      {(() => {
+        const selected = isSelected(localRoutes.settings);
+        return (
+          <StyledListItem
+            button
+            onClick={onClick(localRoutes.settings)}
+            selected={selected}
+            className={classes.item}
+            classes={{ selected: classes.selectedItem }}
+          >
+            <ListItemIcon
+              className={selected ? classes.iconSelected : classes.icon}
+            >
+              <SettingsIcon style={{ fontSize: 19 }} />
+            </ListItemIcon>
+            <ListItemText
+              primary="Settings"
+              className={selected ? classes.textSelected : classes.text}
+            />
+          </StyledListItem>
+        );
+      })()}
+      <StyledListItem button onClick={doLogout} className={classes.item}>
+        <ListItemIcon className={classes.icon}>
+          <ExitToAppIcon style={{ fontSize: 19 }} />
+        </ListItemIcon>
+        <ListItemText primary="Logout" className={classes.text} />
+      </StyledListItem>
+    </>
+  );
+
+  // ── Hub Manager sidebar ──────────────────────────────────────────────────
+  if (hubManager) {
+    return (
+      <div className={classes.root}>
+        {Logo}
+        <List className={classes.list}>
+          {renderRouteList(hubManagerRoutes)}
+        </List>
+        <Divider style={{ backgroundColor: 'rgba(0,0,0,0.06)' }} />
+        <List className={classes.bottomList}>{BottomActions}</List>
+      </div>
+    );
+  }
+
+  // ── Trainer sidebar ──────────────────────────────────────────────────────
+  if (trainer) {
+    return (
+      <div className={classes.root}>
+        {Logo}
+        <div
+          style={{
+            padding: '8px 20px 10px',
+            borderBottom: '1px solid rgba(0,0,0,0.06)',
+          }}
+        >
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: '#9ca3af',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+            }}
+          >
+            Instructor Portal
+          </span>
+        </div>
+        <List className={classes.list}>{renderRouteList(trainerRoutes)}</List>
+        <Divider style={{ backgroundColor: 'rgba(0,0,0,0.06)' }} />
+        <List className={classes.bottomList}>{BottomActions}</List>
+      </div>
+    );
+  }
+
+  // ── Super Admin / Admin sidebar ──────────────────────────────────────────
   const finalRoutes = cleanRoutes(staffRoutes);
 
   return (
     <div className={classes.root}>
       {Logo}
-      <List className={classes.list}>
-        {finalRoutes.map((it) => {
-          const Icon = it.icon;
-          const selected = isSelected(it.route!);
-          return (
-            <StyledListItem
-              button
-              key={it.name}
-              onClick={onClick(it.route!)}
-              selected={selected}
-              className={classes.item}
-              classes={{ selected: classes.selectedItem }}
-            >
-              <ListItemIcon
-                className={selected ? classes.iconSelected : classes.icon}
-              >
-                <Icon style={{ fontSize: 19 }} />
-              </ListItemIcon>
-              <ListItemText
-                primary={it.name}
-                className={selected ? classes.textSelected : classes.text}
-              />
-            </StyledListItem>
-          );
-        })}
-      </List>
-
+      <List className={classes.list}>{renderRouteList(finalRoutes)}</List>
       <Divider style={{ backgroundColor: 'rgba(0,0,0,0.06)' }} />
-
-      <List className={classes.bottomList}>
-        {(() => {
-          const selected = isSelected(localRoutes.settings);
-          return (
-            <StyledListItem
-              button
-              onClick={onClick(localRoutes.settings)}
-              selected={selected}
-              className={classes.item}
-              classes={{ selected: classes.selectedItem }}
-            >
-              <ListItemIcon
-                className={selected ? classes.iconSelected : classes.icon}
-              >
-                <SettingsIcon style={{ fontSize: 19 }} />
-              </ListItemIcon>
-              <ListItemText
-                primary="Settings"
-                className={selected ? classes.textSelected : classes.text}
-              />
-            </StyledListItem>
-          );
-        })()}
-        <StyledListItem button onClick={doLogout} className={classes.item}>
-          <ListItemIcon className={classes.icon}>
-            <ExitToAppIcon style={{ fontSize: 19 }} />
-          </ListItemIcon>
-          <ListItemText primary="Logout" className={classes.text} />
-        </StyledListItem>
-      </List>
+      <List className={classes.bottomList}>{BottomActions}</List>
     </div>
   );
 };

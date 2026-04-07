@@ -1,43 +1,13 @@
 import { IAuthUser } from './types';
 
 export const appRoles = {
-  Super: 'SUPER',
+  SuperAdmin: 'SUPER_ADMIN',
   Admin: 'ADMIN',
-  Principal: 'PRINCIPAL',
-  SchoolAdmin: 'SCHOOL_ADMIN',
-  StudentManager: 'STUDENT_MANAGER',
-  CourseManager: 'COURSE_MANAGER',
-  Instructor: 'INSTRUCTOR',
   HubManager: 'HUB_MANAGER',
-
-  User: 'USER',
+  Trainer: 'TRAINER',
+  Instructor: 'INSTRUCTOR',
   Student: 'STUDENT',
 };
-
-export const principalRoles = [appRoles.Admin, appRoles.Principal];
-export const schoolRoles = [
-  appRoles.SchoolAdmin,
-  appRoles.StudentManager,
-  appRoles.CourseManager,
-  appRoles.Instructor,
-  appRoles.HubManager,
-];
-export const backOfficeRoles = [
-  ...principalRoles,
-  appRoles.SchoolAdmin,
-  appRoles.StudentManager,
-  appRoles.CourseManager,
-];
-export const principalAssignRoles = [
-  ...backOfficeRoles,
-  appRoles.User,
-  appRoles.Instructor,
-];
-export const schoolAssignRoles = [
-  ...schoolRoles,
-  appRoles.User,
-  appRoles.Student,
-];
 
 export const isStudent = (user: IAuthUser): boolean => {
   if (!user) return false;
@@ -83,14 +53,23 @@ export const hasAnyRole = (
   appPermissions: string[],
 ): boolean => appPermissions.filter(Boolean).some((it) => hasRole(user, it));
 
-export const isPrincipalUser = (user: IAuthUser) =>
-  hasAnyRole(user, [...principalRoles, appRoles.Super]);
-
-export const isBackOfficeUser = (user: IAuthUser) =>
-  hasAnyRole(user, [...backOfficeRoles, appRoles.Super]);
-
-export const isSchoolAdmin = (user: IAuthUser) =>
-  hasAnyRole(user, [appRoles.SchoolAdmin]);
-
 export const isInstructor = (user: IAuthUser) =>
   hasAnyRole(user, [appRoles.Instructor]);
+
+export const isSuperAdmin = (user: IAuthUser): boolean => {
+  if (!user) return false;
+  const roles = user.roles || [];
+  return roles.some((r) => r === 'SUPER_ADMIN');
+};
+
+export const isHubManager = (user: IAuthUser): boolean => {
+  if (!user) return false;
+  const roles = user.roles || [];
+  return roles.some((r) => r === 'HUB_MANAGER');
+};
+
+export const isTrainer = (user: IAuthUser): boolean => {
+  if (!user) return false;
+  const roles = user.roles || [];
+  return roles.some((r) => r === 'TRAINER' || r === 'INSTRUCTOR');
+};

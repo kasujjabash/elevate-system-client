@@ -456,7 +456,7 @@ const Hubs = () => {
                       {hub.projectors > 0 && (
                         <span className={classes.resource}>
                           <SchoolIcon style={{ fontSize: 13 }} />
-                          {hub.projectors} Projectors
+                          {hub.projectors} Screens
                         </span>
                       )}
                       {hub.capacity > 0 && (
@@ -481,8 +481,8 @@ const Hubs = () => {
                       className={classes.statBtn}
                       onClick={() => setDetailHub(hub)}
                     >
-                      <SchoolIcon style={{ fontSize: 15, color: '#0ea5e9' }} />
-                      {hub.courses?.length ?? 0} Courses
+                      <PeopleIcon style={{ fontSize: 15, color: '#0ea5e9' }} />
+                      {hub.students?.length ?? hub.studentCount ?? 0} Registered
                     </button>
                   </div>
 
@@ -679,7 +679,7 @@ const Hubs = () => {
                 </Grid>
                 <Grid item xs={4}>
                   <TextField
-                    label="Projectors"
+                    label="Screens"
                     {...field('projectors')}
                     type="number"
                     variant="outlined"
@@ -926,7 +926,7 @@ const Hubs = () => {
                         </div>
                         <div className={classes.meta}>
                           <SchoolIcon style={{ fontSize: 15 }} />
-                          {detailHub.projectors ?? 0} Projectors
+                          {detailHub.projectors ?? 0} Screens
                         </div>
                         <div className={classes.meta}>
                           <EventSeatIcon style={{ fontSize: 15 }} />

@@ -2,11 +2,15 @@ import React, { useState } from 'react';
 import * as yup from 'yup';
 import { FormikHelpers } from 'formik';
 import Grid from '@material-ui/core/Grid';
-import { reqArray, reqString } from '../../../data/validations';
+import { reqArray } from '../../../data/validations';
 import XForm from '../../../components/forms/XForm';
 import XTextInput from '../../../components/inputs/XTextInput';
 import XCheckBoxInput from '../../../components/inputs/XCheckBoxInput';
-import { remoteRoutes, permissionsList } from '../../../data/constants';
+import {
+  remoteRoutes,
+  permissionsList,
+  platformRoles,
+} from '../../../data/constants';
 import { handleSubmission, ISubmission } from '../../../utils/formHelpers';
 import { del } from '../../../utils/ajax';
 import Toast from '../../../utils/Toast';
@@ -22,16 +26,18 @@ interface IProps {
 }
 
 const schema = yup.object().shape({
-  role: reqString,
+  role: yup.string().required('Role name is required'),
   permissions: reqArray,
-  description: reqString,
+  description: yup.string().nullable().optional(),
 });
 
 const initialValues = {
-  role: null,
+  role: '',
+  description: '',
   permissions: [],
   isActive: true,
 };
+
 const RolesEditor = ({ data, isNew, done, onDeleted, onCancel }: IProps) => {
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -56,14 +62,12 @@ const RolesEditor = ({ data, isNew, done, onDeleted, onCancel }: IProps) => {
     setLoading(true);
     del(
       `${remoteRoutes.roles}/${data.id}`,
-      (dt) => {
+      (_dt) => {
         Toast.success('Operation succeeded');
         onDeleted(data);
       },
       undefined,
-      () => {
-        setLoading(false);
-      },
+      () => setLoading(false),
     );
   }
 
@@ -78,12 +82,18 @@ const RolesEditor = ({ data, isNew, done, onDeleted, onCancel }: IProps) => {
     >
       <Grid spacing={1} container>
         <Grid item xs={12}>
-          <XTextInput name="role" label="Role" type="text" variant="outlined" />
+          <XComboInput
+            name="role"
+            label="Role"
+            options={platformRoles}
+            variant="outlined"
+            multiple={false}
+          />
         </Grid>
         <Grid item xs={12}>
           <XTextInput
             name="description"
-            label="Description"
+            label="Description (optional)"
             type="text"
             variant="outlined"
           />

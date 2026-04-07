@@ -11,9 +11,6 @@ export const appPermissions = {
 
   roleEdit: 'ROLE_EDIT',
 
-  roleTagView: 'TAG_VIEW',
-  roleTagEdit: 'TAG_EDIT',
-
   roleCourseView: 'COURSE_VIEW',
   roleCourseEdit: 'COURSE_EDIT',
 
@@ -38,7 +35,31 @@ export const appPermissions = {
   manageHelp: 'MANAGE_HELP',
 };
 
-export const permissionsList = Object.values(appPermissions);
+// Deduplicated platform permissions for the role editor dropdown
+export const permissionsList = [
+  'DASHBOARD',
+  'USER_VIEW',
+  'USER_EDIT',
+  'ROLE_EDIT',
+  'STUDENT_VIEW',
+  'STUDENT_EDIT',
+  'COURSE_VIEW',
+  'COURSE_EDIT',
+  'CLASS_VIEW',
+  'CLASS_EDIT',
+  'HUB_VIEW',
+  'HUB_EDIT',
+  'ANNOUNCEMENT',
+];
+
+// Platform roles — used in role assignment dropdowns
+export const platformRoles = [
+  'SUPER_ADMIN',
+  'ADMIN',
+  'HUB_MANAGER',
+  'TRAINER',
+  'STUDENT',
+];
 
 export const courseCategories = {
   graphicDesign: 'graphic-design',
@@ -138,6 +159,11 @@ export const localRoutes = {
   teacherAssignmentDetails: '/admin/assignments/:assignmentId',
   timetable: '/admin/timetable',
   adminCourses: '/admin/courses',
+  trainerCourses: '/trainer/courses',
+  trainerStudents: '/trainer/students',
+  trainerLectures: '/trainer/lectures',
+  trainerResources: '/trainer/resources',
+  trainerAnalytics: '/trainer/analytics',
   adminAnnouncements: '/admin/announcements',
 };
 
@@ -206,6 +232,7 @@ export const remoteRoutes = {
   contactsEmail: `${apiBaseUrl}/api/students/emails`,
   contactsIdentification: `${apiBaseUrl}/api/students/identifications`,
   contactsPeople: `${apiBaseUrl}/api/students/people`,
+  crmPeople: `${apiBaseUrl}/api/crm/people`,
   contactsPhone: `${apiBaseUrl}/api/students/phones`,
   eventsMetricsRaw: `${apiBaseUrl}/api/classes/metrics/raw`,
 
@@ -269,7 +296,13 @@ export const remoteRoutes = {
   dashboardStats: `${apiBaseUrl}/api/dashboard/stats`,
   dashboardReportStats: `${apiBaseUrl}/api/dashboard/report-stats`,
   hubStats: `${apiBaseUrl}/api/dashboard/hub-stats`,
+  trainerStats: `${apiBaseUrl}/api/dashboard/trainer-stats`,
+  courseResources: `${apiBaseUrl}/api/courses`, // append /:id/resources
   timetable: `${apiBaseUrl}/api/timetable`,
+
+  // Course-scoped chat
+  chatRooms: `${apiBaseUrl}/api/chat/rooms`,
+  chatContacts: `${apiBaseUrl}/api/chat/contacts`,
 
   // File uploads
   uploads: `${apiBaseUrl}/api/uploads`,
