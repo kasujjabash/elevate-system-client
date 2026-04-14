@@ -145,6 +145,7 @@ const hubManagerRoutes: IAppRoute[] = [
     route: localRoutes.adminAnnouncements,
     icon: NotificationsActiveIcon,
   },
+  { name: 'Reports', route: localRoutes.hubReports, icon: BarChartIcon },
 ];
 
 // ── Trainer: instructor portal nav ───────────────────────────────────────────

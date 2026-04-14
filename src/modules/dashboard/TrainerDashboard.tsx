@@ -16,9 +16,11 @@ import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 import { format } from 'date-fns';
 import { useHistory } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import Layout from '../../components/layout/Layout';
 import { search } from '../../utils/ajax';
 import { remoteRoutes, localRoutes } from '../../data/constants';
+import { IState } from '../../data/types';
 
 const CORAL = '#fe3a6a';
 const ORANGE = '#fe8c45';
@@ -415,77 +417,86 @@ const MiniCalendar: React.FC = () => {
 const TrainerDashboard = () => {
   const classes = useStyles();
   const history = useHistory();
-  const [stats, setStats] = useState({
-    courses: 0,
-    activeStudents: 0,
-    classesToday: 0,
-    todayAttendance: 0,
-    pendingSubmissions: 0,
-    activeClasses: 0,
-    weekAttendance: [] as any[],
-  });
+  const user = useSelector((state: IState) => state.core.user);
   const [myCourses, setMyCourses] = useState<any[]>([]);
   const [todayClasses, setTodayClasses] = useState<any[]>([]);
   const [recentSubmissions, setRecentSubmissions] = useState<any[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
-    search(
-      remoteRoutes.trainerStats,
-      {},
-      (data: any) => {
-        if (data) {
-          setStats((prev) => ({
-            ...prev,
-            ...data,
-            weekAttendance: Array.isArray(data.weekAttendance)
-              ? data.weekAttendance
-              : [],
-          }));
-          if (Array.isArray(data.todayClasses))
-            setTodayClasses(data.todayClasses);
-          if (Array.isArray(data.recentSubmissions))
-            setRecentSubmissions(data.recentSubmissions);
-        }
-      },
-      undefined,
-      undefined,
-    );
+    if (!user?.contactId) return;
 
+    // Step 1: fetch only this trainer's courses
     search(
       remoteRoutes.courses,
-      { limit: 100 },
+      { instructorId: user.contactId, limit: 100 },
       (data: any) => {
-        const list = Array.isArray(data) ? data : data?.data || [];
-        setMyCourses(list);
+        const courses = Array.isArray(data) ? data : data?.data || [];
+        setMyCourses(courses);
+
+        // Step 2: fetch the full timetable, then client-filter to:
+        //   a) courses this trainer teaches
+        //   b) today's day of week
+        const trainerCourseIds = new Set(
+          courses.map((c: any) => String(c.id)).filter(Boolean),
+        );
+        const todayDow = new Date().getDay(); // 0 = Sun, 1 = Mon …
+
+        search(
+          remoteRoutes.timetable,
+          { limit: 500 },
+          (tdata: any) => {
+            const all = Array.isArray(tdata)
+              ? tdata
+              : tdata?.sessions || tdata?.data || [];
+            const forToday = all.filter((t: any) => {
+              const matchDay = Number(t.dayOfWeek) === todayDow;
+              const matchCourse =
+                trainerCourseIds.size === 0 ||
+                trainerCourseIds.has(String(t.courseId));
+              return matchDay && matchCourse;
+            });
+            setTodayClasses(forToday);
+          },
+          undefined,
+          undefined,
+        );
       },
       undefined,
       undefined,
     );
 
+    // Assignment submissions scoped to this trainer
     search(
       remoteRoutes.assignmentSubmissions,
-      { limit: 5, recent: true },
+      { instructorId: user.contactId, limit: 5 },
       (data: any) => {
         const list = Array.isArray(data) ? data : data?.data || [];
-        if (list.length > 0) setRecentSubmissions(list);
+        setRecentSubmissions(list);
+        const pending = list.filter(
+          (s: any) => !s.grade && (s.status || '').toLowerCase() !== 'graded',
+        ).length;
+        setPendingCount(pending);
       },
       undefined,
       undefined,
     );
-  }, []);
+  }, [user?.contactId]);
 
-  const weekAttendanceData =
-    stats.weekAttendance.length > 0
-      ? stats.weekAttendance
-      : myCourses
-          .slice(0, 4)
-          .map((c: any) => ({
-            courseName: c.title || c.name || 'Course',
-            percentage: 0,
-          }));
+  // Derive attendance overview from courses
+  const weekAttendanceData = myCourses.slice(0, 4).map((c: any) => ({
+    courseName: c.title || c.name || 'Course',
+    percentage: c.attendanceRate ?? c.attendance ?? 0,
+  }));
 
-  const activeClassesCount =
-    stats.activeClasses || stats.courses || myCourses.length;
+  // Derive student count from course enrollments
+  const totalStudents = myCourses.reduce(
+    (sum, c) =>
+      sum + (c.enrolledCount || c.studentCount || c.enrollments?.length || 0),
+    0,
+  );
+
+  const activeClassesCount = myCourses.length;
 
   return (
     <Layout>
@@ -561,9 +572,9 @@ const TrainerDashboard = () => {
             <div className={classes.sectionLabel}>
               <AssignmentIcon style={{ fontSize: 15, color: CORAL }} />
               Recent Submissions
-              {stats.pendingSubmissions > 0 && (
+              {pendingCount > 0 && (
                 <span className={classes.pendingBadge}>
-                  {stats.pendingSubmissions} pending
+                  {pendingCount} pending
                 </span>
               )}
             </div>
@@ -700,7 +711,7 @@ const TrainerDashboard = () => {
             },
             {
               label: 'Total Students',
-              value: stats.activeStudents,
+              value: totalStudents,
               Icon: PeopleIcon,
               color: BLUE,
               bg: 'rgba(59,130,246,0.08)',
@@ -708,7 +719,7 @@ const TrainerDashboard = () => {
             },
             {
               label: 'Pending Grades',
-              value: stats.pendingSubmissions,
+              value: pendingCount,
               Icon: AssignmentIcon,
               color: AMBER,
               bg: 'rgba(245,158,11,0.08)',

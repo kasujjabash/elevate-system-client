@@ -15,6 +15,7 @@ import { useSelector } from 'react-redux';
 import Layout from '../../components/layout/Layout';
 import { remoteRoutes } from '../../data/constants';
 import { IState } from '../../data/types';
+import { isTrainer } from '../../data/appRoles';
 import { search } from '../../utils/ajax';
 
 const CORAL = '#fe3a6a';
@@ -238,14 +239,66 @@ const MyTimetable = () => {
   useEffect(() => {
     const sid = user?.contactId || user?.id;
     if (!sid) return;
-    search(
-      remoteRoutes.timetable,
-      { studentId: sid, contactId: sid },
-      (data: any) =>
-        setSessions(Array.isArray(data) ? data : data?.sessions || []),
-      undefined,
-      () => {},
-    );
+
+    const trainer = isTrainer(user!);
+
+    // Step 2 — fetch timetable and scope to the resolved course IDs
+    const loadTimetable = (courseIds: Set<string>) => {
+      search(
+        remoteRoutes.timetable,
+        { limit: 500 },
+        (data: any) => {
+          const all: any[] = Array.isArray(data)
+            ? data
+            : data?.sessions || data?.data || [];
+          const scoped =
+            courseIds.size > 0
+              ? all.filter(
+                  (s: any) => !s.courseId || courseIds.has(String(s.courseId)),
+                )
+              : all;
+          setSessions(scoped);
+        },
+        undefined,
+        () => {},
+      );
+    };
+
+    if (trainer) {
+      // Trainers: scope to courses they teach
+      search(
+        remoteRoutes.courses,
+        { instructorId: sid },
+        (courseData: any) => {
+          const list: any[] = Array.isArray(courseData)
+            ? courseData
+            : courseData?.data || [];
+          const ids = new Set(
+            list.map((c: any) => String(c.id || c.courseId)).filter(Boolean),
+          );
+          loadTimetable(ids);
+        },
+        () => loadTimetable(new Set()),
+        undefined,
+      );
+    } else {
+      // Students: scope to courses they're enrolled in
+      search(
+        remoteRoutes.myCourses,
+        {},
+        (courseData: any) => {
+          const list: any[] = Array.isArray(courseData)
+            ? courseData
+            : courseData?.data || [];
+          const ids = new Set(
+            list.map((c: any) => String(c.id || c.courseId)).filter(Boolean),
+          );
+          loadTimetable(ids);
+        },
+        () => loadTimetable(new Set()),
+        undefined,
+      );
+    }
   }, [user?.contactId]);
 
   const weekEnd = addDays(weekStart, 6);
@@ -294,6 +347,8 @@ const MyTimetable = () => {
 
   const fmt = (d: Date) => format(d, 'd MMM yyyy');
 
+  const isTrainerUser = isTrainer(user!);
+
   return (
     <Layout title="My Timetable">
       <div className={classes.root}>
@@ -301,7 +356,9 @@ const MyTimetable = () => {
         <div className={classes.breadcrumb}>
           <span>Home</span>
           <span className={classes.breadcrumbSep}>›</span>
-          <span className={classes.breadcrumbActive}>My Time Table</span>
+          <span className={classes.breadcrumbActive}>
+            {isTrainerUser ? 'My Schedule' : 'My Timetable'}
+          </span>
         </div>
 
         {/* Banner */}
@@ -309,9 +366,9 @@ const MyTimetable = () => {
           <div>
             <div className={classes.bannerTitle}>Weekly Schedule Overview</div>
             <div className={classes.bannerDesc}>
-              Stay on top of your week with a clear overview of all your
-              upcoming classes, events, and activities. Everything you need to
-              plan your time effectively is right here at a glance.
+              {isTrainerUser
+                ? 'Your teaching schedule for the week — all sessions across your courses.'
+                : 'Stay on top of your week with a clear overview of all your upcoming classes and activities.'}
             </div>
           </div>
           <div className={classes.bannerDeco}>
@@ -412,7 +469,7 @@ const MyTimetable = () => {
             <div className={classes.sidebarTitle}>Events This Week</div>
             {weekSessions.length === 0 ? (
               <Typography style={{ fontSize: 13, color: '#8a8f99' }}>
-                No classes scheduled for this week.
+                No sessions scheduled for this week.
                 <br />
                 <span
                   style={{
@@ -422,8 +479,9 @@ const MyTimetable = () => {
                     display: 'block',
                   }}
                 >
-                  Classes appear here once your admin adds sessions for your
-                  enrolled courses.
+                  {isTrainerUser
+                    ? 'Sessions appear here once the hub manager adds timetable entries for your courses.'
+                    : 'Sessions appear here once your admin adds timetable entries for your enrolled courses.'}
                 </span>
               </Typography>
             ) : (

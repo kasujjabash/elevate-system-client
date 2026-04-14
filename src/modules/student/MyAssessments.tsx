@@ -17,8 +17,10 @@ import {
   CircularProgress,
 } from '@material-ui/core';
 import GetAppIcon from '@material-ui/icons/GetApp';
+import { useSelector } from 'react-redux';
 import { remoteRoutes } from '../../data/constants';
-import { get } from '../../utils/ajax';
+import { search } from '../../utils/ajax';
+import { IState } from '../../data/types';
 
 const CORAL = '#fe3a6a';
 
@@ -39,28 +41,35 @@ const gradeColor = (grade: string) => {
 };
 
 const MyAssessments = () => {
+  const user = useSelector((state: IState) => state.core.user);
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(0);
 
   useEffect(() => {
+    const sid = user?.contactId || user?.id;
     let mounted = true;
-    get(
+    search(
       remoteRoutes.examResults,
+      { contactId: sid, studentId: sid },
       (data: any) => {
-        if (mounted) setResults(Array.isArray(data) ? data : []);
+        if (mounted) {
+          setResults(Array.isArray(data) ? data : data?.data || []);
+          setLoading(false);
+        }
       },
       () => {
-        if (mounted) setResults([]);
+        if (mounted) {
+          setResults([]);
+          setLoading(false);
+        }
       },
-      () => {
-        if (mounted) setLoading(false);
-      },
+      undefined,
     );
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [user?.contactId]);
 
   const gpa = results.length
     ? (

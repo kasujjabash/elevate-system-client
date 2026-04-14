@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Avatar,
   Grid,
@@ -10,8 +10,7 @@ import {
 import PeopleIcon from '@material-ui/icons/People';
 import HowToRegIcon from '@material-ui/icons/HowToReg';
 import SchoolIcon from '@material-ui/icons/School';
-import PersonAddIcon from '@material-ui/icons/PersonAdd';
-import CheckCircleOutlineIcon from '@material-ui/icons/CheckCircleOutline';
+import ClassIcon from '@material-ui/icons/Class';
 import BlockIcon from '@material-ui/icons/Block';
 import DateRangeIcon from '@material-ui/icons/DateRange';
 import NotificationsActiveIcon from '@material-ui/icons/NotificationsActive';
@@ -38,7 +37,6 @@ const COURSE_COLORS = [CORAL, BLUE, PURPLE, AMBER, GREEN, ORANGE];
 const useStyles = makeStyles((theme: Theme) => ({
   root: { paddingBottom: 32 },
 
-  /* ── banner ─────────────────────────────────── */
   banner: {
     background: `linear-gradient(120deg, ${CORAL} 0%, ${ORANGE} 100%)`,
     borderRadius: 14,
@@ -78,11 +76,7 @@ const useStyles = makeStyles((theme: Theme) => ({
     borderRadius: '50%',
     background: 'rgba(255,255,255,0.06)',
   },
-  bannerStatsRow: {
-    display: 'flex',
-    gap: 20,
-    flexWrap: 'wrap' as any,
-  },
+  bannerStatsRow: { display: 'flex', gap: 20, flexWrap: 'wrap' as any },
   bannerStat: {
     background: 'rgba(255,255,255,0.18)',
     borderRadius: 10,
@@ -102,7 +96,6 @@ const useStyles = makeStyles((theme: Theme) => ({
     fontWeight: 500,
   },
 
-  /* ── section heading ────────────────────────── */
   sectionLabel: {
     fontSize: 14,
     fontWeight: 700,
@@ -122,7 +115,6 @@ const useStyles = makeStyles((theme: Theme) => ({
     '&:hover': { textDecoration: 'underline' },
   },
 
-  /* ── generic card ───────────────────────────── */
   card: {
     background: '#fff',
     borderRadius: 12,
@@ -140,7 +132,6 @@ const useStyles = makeStyles((theme: Theme) => ({
     marginBottom: 14,
   },
 
-  /* ── KPI strip ──────────────────────────────── */
   kpiRow: {
     display: 'flex',
     gap: 12,
@@ -176,10 +167,8 @@ const useStyles = makeStyles((theme: Theme) => ({
     textTransform: 'uppercase' as any,
     letterSpacing: '0.04em',
   },
-  kpiSub: { fontSize: 10, color: GREEN, fontWeight: 700, marginTop: 2 },
   kpiSubWarn: { fontSize: 10, color: CORAL, fontWeight: 700, marginTop: 2 },
 
-  /* ── course breakdown ───────────────────────── */
   courseCard: {
     background: '#fff',
     borderRadius: 12,
@@ -218,16 +207,7 @@ const useStyles = makeStyles((theme: Theme) => ({
     minWidth: 30,
     textAlign: 'right' as any,
   },
-  courseActiveLabel: {
-    fontSize: 10,
-    color: GREEN,
-    fontWeight: 600,
-    flexShrink: 0,
-    minWidth: 54,
-    textAlign: 'right' as any,
-  },
 
-  /* ── student rows ───────────────────────────── */
   recentRow: {
     display: 'flex',
     alignItems: 'center',
@@ -254,7 +234,6 @@ const useStyles = makeStyles((theme: Theme) => ({
     padding: '20px 0',
   },
 
-  /* ── right column ───────────────────────────── */
   rightCard: {
     background: '#fff',
     borderRadius: 12,
@@ -272,7 +251,6 @@ const useStyles = makeStyles((theme: Theme) => ({
     marginBottom: 10,
   },
 
-  /* ── calendar ───────────────────────────────── */
   calHeader: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -329,7 +307,6 @@ const useStyles = makeStyles((theme: Theme) => ({
     fontWeight: '700 !important' as any,
   },
 
-  /* ── shortcut buttons ───────────────────────── */
   shortcutBtn: {
     width: '100%',
     display: 'flex',
@@ -357,7 +334,6 @@ const useStyles = makeStyles((theme: Theme) => ({
   shortcutLabel: { fontSize: 13, fontWeight: 600, color: DARK },
   shortcutSub: { fontSize: 11, color: '#9ca3af' },
 
-  /* ── progress bars ──────────────────────────── */
   progressBar: { height: 5, borderRadius: 3, backgroundColor: '#f3f4f6' },
   progressFill: {
     background: `linear-gradient(90deg, ${CORAL} 0%, ${ORANGE} 100%)`,
@@ -365,7 +341,6 @@ const useStyles = makeStyles((theme: Theme) => ({
   },
 }));
 
-// ── Mini Calendar ─────────────────────────────────────────────────────────────
 const MiniCalendar: React.FC = () => {
   const classes = useStyles();
   const [month, setMonth] = useState(new Date());
@@ -435,7 +410,25 @@ const MiniCalendar: React.FC = () => {
   );
 };
 
-// ── Main Component ────────────────────────────────────────────────────────────
+interface HubStats {
+  hubId: number | null;
+  hubName: string;
+  totalStudents: number;
+  activeStudents: number;
+  inactiveStudents: number;
+  totalCourses: number;
+  classesToday: number;
+  todayAttendance: number;
+  courses: { id: number; name: string; enrolled: number }[];
+  recentStudents: {
+    id: number;
+    name: string;
+    status: string;
+    course: string | null;
+    enrolledAt: string;
+  }[];
+}
+
 const HubManagerDashboard = () => {
   const classes = useStyles();
   const history = useHistory();
@@ -444,95 +437,61 @@ const HubManagerDashboard = () => {
   const firstName =
     user?.fullName?.split(' ')[0] || user?.username || 'Manager';
 
-  const [hubStudents, setHubStudents] = useState<any[]>([]);
+  const [stats, setStats] = useState<HubStats>({
+    hubId: null,
+    hubName: 'Your Hub',
+    totalStudents: 0,
+    activeStudents: 0,
+    inactiveStudents: 0,
+    totalCourses: 0,
+    classesToday: 0,
+    todayAttendance: 0,
+    courses: [],
+    recentStudents: [],
+  });
   const [loading, setLoading] = useState(true);
-  const [todayAttendance, setTodayAttendance] = useState(0);
 
   useEffect(() => {
     setLoading(true);
     search(
-      remoteRoutes.students,
-      { limit: 10000, skip: 0 },
+      remoteRoutes.hubManagerStats,
+      {},
       (data: any) => {
-        const list = data?.data || (Array.isArray(data) ? data : []);
-        setHubStudents(list);
+        setStats((prev) => ({
+          ...prev,
+          ...data,
+          courses: data.courses || [],
+          recentStudents: data.recentStudents || [],
+        }));
         setLoading(false);
       },
       () => setLoading(false),
       undefined,
     );
-    search(
-      remoteRoutes.dashboardStats,
-      {},
-      (data: any) => {
-        if (data?.todayAttendance) setTodayAttendance(data.todayAttendance);
-      },
-      undefined,
-      undefined,
-    );
   }, []);
 
-  // ── Derived metrics ───────────────────────────────────────────────────────
-  const totalStudents = hubStudents.length;
-  const activeStudents = hubStudents.filter(
-    (s) => (s.status || '').toLowerCase() === 'active',
-  ).length;
-  const inactiveStudents = totalStudents - activeStudents;
   const activeRate =
-    totalStudents > 0 ? Math.round((activeStudents / totalStudents) * 100) : 0;
+    stats.totalStudents > 0
+      ? Math.round((stats.activeStudents / stats.totalStudents) * 100)
+      : 0;
 
-  const newThisWeek = hubStudents.filter((s) => {
-    if (!s.registeredAt) return false;
-    return (
-      new Date(s.registeredAt) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    );
-  }).length;
-
-  const courseBreakdown = useMemo(() => {
-    const map: Record<
-      string,
-      { course: string; total: number; active: number }
-    > = {};
-    hubStudents.forEach((s) => {
-      const key = s.course || 'Uncategorised';
-      if (!map[key]) map[key] = { course: key, total: 0, active: 0 };
-      map[key].total++;
-      if ((s.status || '').toLowerCase() === 'active') map[key].active++;
-    });
-    return Object.values(map).sort((a, b) => b.total - a.total);
-  }, [hubStudents]);
-
-  const maxCourse = courseBreakdown.reduce((m, c) => Math.max(m, c.total), 1);
-
-  const hubName =
-    hubStudents[0]?.hubName ||
-    (hubStudents[0]?.hub
-      ? hubStudents[0].hub.charAt(0).toUpperCase() + hubStudents[0].hub.slice(1)
-      : 'Your Hub');
-
-  const recentStudents = useMemo(
-    () =>
-      [...hubStudents]
-        .sort((a, b) => {
-          const da = a.registeredAt ? new Date(a.registeredAt).getTime() : 0;
-          const db = b.registeredAt ? new Date(b.registeredAt).getTime() : 0;
-          return db - da;
-        })
-        .slice(0, 8),
-    [hubStudents],
+  const maxEnrolled = (stats.courses || []).reduce(
+    (m, c) => Math.max(m, c.enrolled),
+    1,
   );
 
   const statusColor = (status: string) => {
     const s = (status || '').toLowerCase();
     if (s === 'active') return { background: '#d1fae5', color: '#065f46' };
-    if (s === 'pending') return { background: '#fef3c7', color: '#92400e' };
-    return { background: '#fee2e2', color: '#991b1b' };
+    if (s === 'inactive') return { background: '#fee2e2', color: '#991b1b' };
+    if (s === 'graduated') return { background: '#dbeafe', color: '#1e40af' };
+    return { background: '#fef3c7', color: '#92400e' };
   };
 
   const shortcuts = [
     {
       label: 'Students',
-      sub: `${totalStudents} enrolled`,
+      sub: `${stats.totalStudents} enrolled`,
       Icon: PeopleIcon,
       color: CORAL,
       bg: 'rgba(254,58,106,0.08)',
@@ -548,7 +507,7 @@ const HubManagerDashboard = () => {
     },
     {
       label: 'Attendance',
-      sub: `${todayAttendance} today`,
+      sub: `${stats.todayAttendance} today`,
       Icon: HowToRegIcon,
       color: GREEN,
       bg: 'rgba(16,185,129,0.08)',
@@ -567,88 +526,83 @@ const HubManagerDashboard = () => {
   return (
     <Layout>
       <div className={classes.root}>
-        {/* ── Banner with hub-specific stats ──────────────────────────── */}
+        {/* Banner */}
         <div className={classes.banner}>
           <div className={classes.bannerCircle1} />
           <div className={classes.bannerCircle2} />
           <div className={classes.bannerInner}>
             <div className={classes.bannerTitle}>Welcome, {firstName}</div>
             <div className={classes.bannerSub}>
-              {todayLabel} · {hubName} Overview
+              {todayLabel} · {stats.hubName} Hub Overview
             </div>
             <div className={classes.bannerStatsRow}>
               <div className={classes.bannerStat}>
                 <div className={classes.bannerStatVal}>
-                  {loading ? '…' : totalStudents}
+                  {loading ? '…' : stats.totalStudents}
                 </div>
-                <div className={classes.bannerStatLabel}>
-                  Students in {hubName} Hub
-                </div>
+                <div className={classes.bannerStatLabel}>Total Students</div>
               </div>
               <div className={classes.bannerStat}>
                 <div className={classes.bannerStatVal}>
-                  {loading ? '…' : activeStudents}
+                  {loading ? '…' : stats.activeStudents}
                 </div>
-                <div className={classes.bannerStatLabel}>
-                  Active Students in {hubName} Hub
-                </div>
+                <div className={classes.bannerStatLabel}>Active Students</div>
               </div>
-              <div
-                className={classes.bannerStat}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                }}
-              >
+              <div className={classes.bannerStat}>
                 <div className={classes.bannerStatVal}>
                   {loading ? '…' : `${activeRate}%`}
                 </div>
                 <div className={classes.bannerStatLabel}>Engagement Rate</div>
+              </div>
+              <div className={classes.bannerStat}>
+                <div className={classes.bannerStatVal}>
+                  {loading ? '…' : stats.totalCourses}
+                </div>
+                <div className={classes.bannerStatLabel}>Active Courses</div>
               </div>
             </div>
           </div>
         </div>
 
         <Grid container spacing={3}>
-          {/* ── LEFT COLUMN ──────────────────────────────────────────── */}
+          {/* LEFT COLUMN */}
           <Grid item xs={12} md={8}>
             {/* KPI Strip */}
             <div className={classes.kpiRow}>
               {[
                 {
-                  label: 'Inactive / Absent',
-                  value: inactiveStudents,
+                  label: 'Inactive Students',
+                  value: stats.inactiveStudents,
                   Icon: BlockIcon,
                   color: CORAL,
                   bg: 'rgba(254,58,106,0.08)',
-                  sub: `${100 - activeRate}% absent`,
-                  subClass: 'warn',
+                  sub: `${100 - activeRate}% inactive`,
                 },
                 {
                   label: 'Courses in Hub',
-                  value: courseBreakdown.length,
+                  value: stats.totalCourses,
                   Icon: SchoolIcon,
                   color: PURPLE,
                   bg: 'rgba(139,92,246,0.08)',
+                  sub: null,
                 },
                 {
-                  label: 'Today Attendance',
-                  value: todayAttendance,
+                  label: "Today's Attendance",
+                  value: stats.todayAttendance,
                   Icon: HowToRegIcon,
                   color: AMBER,
                   bg: 'rgba(245,158,11,0.08)',
+                  sub: null,
                 },
                 {
-                  label: 'New This Week',
-                  value: newThisWeek,
-                  Icon: PersonAddIcon,
+                  label: "Today's Classes",
+                  value: stats.classesToday,
+                  Icon: ClassIcon,
                   color: BLUE,
                   bg: 'rgba(59,130,246,0.08)',
-                  sub: newThisWeek > 0 ? `+${newThisWeek} joined` : undefined,
-                  subClass: 'ok',
+                  sub: null,
                 },
-              ].map(({ label, value, Icon, color, bg, sub, subClass }) => (
+              ].map(({ label, value, Icon, color, bg, sub }) => (
                 <div key={label} className={classes.kpiCard}>
                   <div className={classes.kpiIcon} style={{ background: bg }}>
                     <Icon style={{ fontSize: 19, color }} />
@@ -658,17 +612,7 @@ const HubManagerDashboard = () => {
                       {loading ? '…' : value}
                     </div>
                     <div className={classes.kpiLabel}>{label}</div>
-                    {sub && (
-                      <div
-                        className={
-                          subClass === 'warn'
-                            ? classes.kpiSubWarn
-                            : classes.kpiSub
-                        }
-                      >
-                        {sub}
-                      </div>
-                    )}
+                    {sub && <div className={classes.kpiSubWarn}>{sub}</div>}
                   </div>
                 </div>
               ))}
@@ -677,7 +621,7 @@ const HubManagerDashboard = () => {
             {/* Course Breakdown */}
             <div className={classes.sectionLabel}>
               <SchoolIcon style={{ fontSize: 15, color: CORAL }} />
-              Course Breakdown — {hubName}
+              Course Breakdown — {stats.hubName}
             </div>
             <div className={classes.courseCard}>
               <div className={classes.cardTitle}>
@@ -688,24 +632,22 @@ const HubManagerDashboard = () => {
                   style={{ borderRadius: 4 }}
                   classes={{ bar: classes.progressFill }}
                 />
-              ) : courseBreakdown.length === 0 ? (
+              ) : (stats.courses || []).length === 0 ? (
                 <Typography className={classes.emptyText}>
-                  No students enrolled yet
+                  No courses in this hub yet
                 </Typography>
               ) : (
-                courseBreakdown.map((c, i) => {
-                  const pct = Math.round((c.total / maxCourse) * 100);
-                  const activePct =
-                    c.total > 0 ? Math.round((c.active / c.total) * 100) : 0;
+                (stats.courses || []).map((c, i) => {
+                  const pct = Math.round((c.enrolled / maxEnrolled) * 100);
                   const color = COURSE_COLORS[i % COURSE_COLORS.length];
                   return (
-                    <div key={c.course || i} className={classes.courseRow}>
+                    <div key={c.id} className={classes.courseRow}>
                       <div
                         className={classes.courseColorDot}
                         style={{ background: color }}
                       />
                       <div className={classes.courseInfo}>
-                        <div className={classes.courseName}>{c.course}</div>
+                        <div className={classes.courseName}>{c.name}</div>
                         <div className={classes.courseBarWrap}>
                           <div
                             className={classes.courseBarFill}
@@ -716,31 +658,17 @@ const HubManagerDashboard = () => {
                           />
                         </div>
                       </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'flex-end',
-                          gap: 2,
-                        }}
-                      >
-                        <span className={classes.courseEnrolled}>
-                          {c.total}
-                        </span>
-                        <span className={classes.courseActiveLabel}>
-                          {activePct}% active
-                        </span>
-                      </div>
+                      <div className={classes.courseEnrolled}>{c.enrolled}</div>
                     </div>
                   );
                 })
               )}
             </div>
 
-            {/* Hub Students */}
+            {/* Recent Students */}
             <div className={classes.sectionLabel}>
               <PeopleIcon style={{ fontSize: 15, color: CORAL }} />
-              Hub Students
+              Recent Students
               <span
                 className={classes.viewAllLink}
                 onClick={() => history.push(localRoutes.students)}
@@ -749,12 +677,14 @@ const HubManagerDashboard = () => {
               </span>
             </div>
             <div className={classes.card} style={{ padding: '4px 20px 8px' }}>
-              {recentStudents.length === 0 ? (
+              {loading ? (
+                <LinearProgress classes={{ bar: classes.progressFill }} />
+              ) : (stats.recentStudents || []).length === 0 ? (
                 <Typography className={classes.emptyText}>
                   No students yet
                 </Typography>
               ) : (
-                recentStudents.map((s, i) => (
+                (stats.recentStudents || []).map((s, i) => (
                   <div
                     key={s.id || i}
                     className={classes.recentRow}
@@ -762,13 +692,12 @@ const HubManagerDashboard = () => {
                       history.push(
                         localRoutes.studentsDetails.replace(
                           ':studentId',
-                          s.id || s.contactId,
+                          String(s.id),
                         ),
                       )
                     }
                   >
                     <Avatar
-                      src={s.avatar || undefined}
                       style={{
                         width: 30,
                         height: 30,
@@ -776,21 +705,18 @@ const HubManagerDashboard = () => {
                         background: CORAL,
                       }}
                     >
-                      {(s.name || s.firstName || '?').charAt(0).toUpperCase()}
+                      {(s.name || '?').charAt(0).toUpperCase()}
                     </Avatar>
-                    <span className={classes.recentName}>
-                      {s.name ||
-                        `${s.firstName || ''} ${s.lastName || ''}`.trim()}
-                    </span>
+                    <span className={classes.recentName}>{s.name || '—'}</span>
                     <span className={classes.recentMeta}>
                       {s.course || '—'}
                     </span>
-                    {s.registeredAt && (
+                    {s.enrolledAt && (
                       <span
                         className={classes.recentMeta}
                         style={{ minWidth: 72, textAlign: 'right' }}
                       >
-                        {format(parseISO(s.registeredAt), 'MMM d')}
+                        {format(parseISO(s.enrolledAt), 'MMM d')}
                       </span>
                     )}
                     <span
@@ -805,15 +731,13 @@ const HubManagerDashboard = () => {
             </div>
           </Grid>
 
-          {/* ── RIGHT COLUMN ─────────────────────────────────────────── */}
+          {/* RIGHT COLUMN */}
           <Grid item xs={12} md={4}>
-            {/* Calendar */}
             <div className={classes.rightCard}>
               <div className={classes.rightCardTitle}>Calendar</div>
               <MiniCalendar />
             </div>
 
-            {/* Quick Shortcuts */}
             <div className={classes.rightCard}>
               <div className={classes.rightCardTitle}>Quick Access</div>
               {shortcuts.map(({ label, sub, Icon, color, bg, route }) => (
@@ -836,26 +760,25 @@ const HubManagerDashboard = () => {
               ))}
             </div>
 
-            {/* Attendance summary */}
             <div className={classes.rightCard}>
               <div className={classes.rightCardTitle}>Hub Overview</div>
               {[
                 {
-                  label: 'Active',
-                  value: activeStudents,
-                  total: totalStudents,
+                  label: 'Active Students',
+                  value: stats.activeStudents,
+                  total: stats.totalStudents,
                   color: GREEN,
                 },
                 {
-                  label: 'Inactive',
-                  value: inactiveStudents,
-                  total: totalStudents,
+                  label: 'Inactive Students',
+                  value: stats.inactiveStudents,
+                  total: stats.totalStudents,
                   color: CORAL,
                 },
                 {
                   label: "Today's Attendance",
-                  value: todayAttendance,
-                  total: totalStudents,
+                  value: stats.todayAttendance,
+                  total: stats.totalStudents,
                   color: BLUE,
                 },
               ].map(({ label, value, total, color }) => {

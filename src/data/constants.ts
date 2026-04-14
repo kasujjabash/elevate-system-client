@@ -165,6 +165,7 @@ export const localRoutes = {
   trainerResources: '/trainer/resources',
   trainerAnalytics: '/trainer/analytics',
   adminAnnouncements: '/admin/announcements',
+  hubReports: '/hub-reports',
 };
 
 export const apiBaseUrl =
@@ -297,6 +298,7 @@ export const remoteRoutes = {
   dashboardReportStats: `${apiBaseUrl}/api/dashboard/report-stats`,
   hubStats: `${apiBaseUrl}/api/dashboard/hub-stats`,
   trainerStats: `${apiBaseUrl}/api/dashboard/trainer-stats`,
+  hubManagerStats: `${apiBaseUrl}/api/dashboard/hub-manager-stats`,
   courseResources: `${apiBaseUrl}/api/courses`, // append /:id/resources
   timetable: `${apiBaseUrl}/api/timetable`,
 

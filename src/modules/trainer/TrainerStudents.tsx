@@ -10,12 +10,13 @@ import {
 } from '@material-ui/core';
 import SearchIcon from '@material-ui/icons/Search';
 import { useHistory } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import Layout from '../../components/layout/Layout';
-import { get } from '../../utils/ajax';
+import { search } from '../../utils/ajax';
 import { remoteRoutes } from '../../data/constants';
+import { IState } from '../../data/types';
 
 const CORAL = '#fe3a6a';
-const ORANGE = '#fe8c45';
 const DARK = '#1f2025';
 const GREEN = '#10b981';
 const BLUE = '#3b82f6';
@@ -202,6 +203,7 @@ interface StudentRow {
 const TrainerStudents = () => {
   const classes = useStyles();
   const history = useHistory();
+  const user = useSelector((state: IState) => state.core.user);
 
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [courseNames, setCourseNames] = useState<string[]>([]);
@@ -210,9 +212,12 @@ const TrainerStudents = () => {
   const [activeCourse, setActiveCourse] = useState<string | null>(null);
 
   useEffect(() => {
-    // Step 1: fetch trainer's own courses (JWT-scoped on the server)
-    get(
+    if (!user?.contactId) return;
+
+    // Fetch only courses where the logged-in trainer is the instructor
+    search(
       remoteRoutes.courses,
+      { instructorId: user.contactId },
       (coursesData: any) => {
         const courseList: any[] = Array.isArray(coursesData)
           ? coursesData
@@ -227,7 +232,7 @@ const TrainerStudents = () => {
           courseList.map((c: any) => c.title || c.name || 'Course'),
         );
 
-        // Step 2: for each course fetch its detail (which includes enrollments)
+        // For each course, fetch its enrollments
         const studentMap: Record<string, StudentRow> = {};
         let pending = courseList.length;
 
@@ -236,40 +241,49 @@ const TrainerStudents = () => {
           setLoading(false);
         };
 
+        const processEnrollments = (
+          enrollments: any[],
+          courseTitle: string,
+        ) => {
+          enrollments.forEach((e: any) => {
+            const s = extractStudent(e, courseTitle);
+            const key = s.contactId || s.fullName;
+            if (!key) return;
+            if (studentMap[key]) {
+              if (!studentMap[key].courses.includes(courseTitle)) {
+                studentMap[key].courses.push(courseTitle);
+              }
+            } else {
+              studentMap[key] = { ...s, courses: [courseTitle] };
+            }
+          });
+        };
+
         courseList.forEach((course: any) => {
           const courseTitle = course.title || course.name || 'Course';
-          get(
-            `${remoteRoutes.courses}/${course.id}`,
-            (detail: any) => {
-              const enrollments: any[] = detail?.enrollments || [];
-              enrollments.forEach((e: any) => {
-                const s = extractStudent(e, courseTitle);
-                const key = s.contactId || s.fullName;
-                if (!key) return;
-                if (studentMap[key]) {
-                  // student already from another course — add course name if not present
-                  if (!studentMap[key].courses.includes(courseTitle)) {
-                    studentMap[key].courses.push(courseTitle);
-                  }
-                } else {
-                  studentMap[key] = { ...s, courses: [courseTitle] };
-                }
-              });
+          search(
+            remoteRoutes.groupsMembership,
+            { groupId: course.id },
+            (enrollData: any) => {
+              const enrollments: any[] = Array.isArray(enrollData)
+                ? enrollData
+                : enrollData?.data || [];
+              processEnrollments(enrollments, courseTitle);
               pending--;
               if (pending === 0) done();
             },
-            undefined,
             () => {
               pending--;
               if (pending === 0) done();
             },
+            undefined,
           );
         });
       },
-      undefined,
       () => setLoading(false),
+      undefined,
     );
-  }, []);
+  }, [user?.contactId]);
 
   const filtered = students.filter((s) => {
     const matchesQuery =
