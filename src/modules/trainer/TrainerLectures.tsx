@@ -1,17 +1,29 @@
 import React, { useEffect, useState } from 'react';
-import { Typography, Button, makeStyles, Theme } from '@material-ui/core';
+import {
+  Typography,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  makeStyles,
+  Theme,
+} from '@material-ui/core';
 import RoomIcon from '@material-ui/icons/Room';
 import AccessTimeIcon from '@material-ui/icons/AccessTime';
 import CalendarTodayIcon from '@material-ui/icons/CalendarToday';
 import AddIcon from '@material-ui/icons/Add';
+import VideocamIcon from '@material-ui/icons/Videocam';
 import { useHistory } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
-import { search } from '../../utils/ajax';
+import { search, put } from '../../utils/ajax';
 import { remoteRoutes, localRoutes } from '../../data/constants';
 
 const CORAL = '#fe3a6a';
 const DARK = '#1f2025';
 const BLUE = '#3b82f6';
+const GREEN = '#10b981';
 
 const useStyles = makeStyles((theme: Theme) => ({
   root: { paddingBottom: 32 },
@@ -89,6 +101,16 @@ const useStyles = makeStyles((theme: Theme) => ({
     padding: '1px 7px',
     marginBottom: 6,
   },
+  liveBadge: {
+    display: 'inline-block',
+    background: 'rgba(16,185,129,0.12)',
+    color: GREEN,
+    fontSize: 10,
+    fontWeight: 700,
+    borderRadius: 5,
+    padding: '1px 7px',
+    marginBottom: 6,
+  },
   lectureTitle: { fontSize: 15, fontWeight: 700, color: DARK, marginBottom: 4 },
   lectureCourseName: { fontSize: 12, color: '#8a8f99', marginBottom: 8 },
   lectureMeta: { display: 'flex', gap: 16, flexWrap: 'wrap' as any },
@@ -99,7 +121,28 @@ const useStyles = makeStyles((theme: Theme) => ({
     fontSize: 12,
     color: '#5a5e6b',
   },
-  actions: { display: 'flex', gap: 8, flexShrink: 0 },
+  actions: {
+    display: 'flex',
+    flexDirection: 'column' as any,
+    gap: 8,
+    flexShrink: 0,
+    alignItems: 'flex-end',
+    [theme.breakpoints.down('sm')]: {
+      flexDirection: 'row' as any,
+      alignItems: 'center',
+    },
+  },
+  liveBtn: {
+    background: GREEN,
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 700,
+    borderRadius: 8,
+    padding: '7px 16px',
+    textTransform: 'none' as any,
+    whiteSpace: 'nowrap' as any,
+    '&:hover': { background: '#059669' },
+  },
   viewBtn: {
     background: CORAL,
     color: '#fff',
@@ -125,6 +168,23 @@ const useStyles = makeStyles((theme: Theme) => ({
     textAlign: 'center' as any,
     padding: '48px 0',
   },
+  // dialog
+  dlgTitle: { fontSize: 16, fontWeight: 700, color: DARK },
+  dlgSub: { fontSize: 12, color: '#8a8f99', marginTop: 4 },
+  dlgSaveBtn: {
+    background: GREEN,
+    color: '#fff',
+    fontWeight: 700,
+    borderRadius: 8,
+    textTransform: 'none' as any,
+    '&:hover': { background: '#059669' },
+  },
+  dlgCancelBtn: {
+    color: '#8a8f99',
+    fontWeight: 600,
+    borderRadius: 8,
+    textTransform: 'none' as any,
+  },
 }));
 
 const TABS = ['All Lectures', 'Upcoming', 'Completed'];
@@ -135,8 +195,12 @@ const TrainerLectures = () => {
   const [tab, setTab] = useState(0);
   const [lectures, setLectures] = useState<any[]>([]);
 
+  // "Start Live" dialog state
+  const [liveDialog, setLiveDialog] = useState<any | null>(null);
+  const [linkInput, setLinkInput] = useState('');
+  const [saving, setSaving] = useState(false);
+
   useEffect(() => {
-    // Fetch trainer's timetable/classes as lectures
     search(
       remoteRoutes.timetable,
       { limit: 100 },
@@ -157,6 +221,56 @@ const TrainerLectures = () => {
     if (tab === 2) return status === 'completed' || status === 'done';
     return true;
   });
+
+  // Resolve meeting URL from various possible field names
+  const getMeetingUrl = (l: any): string | null =>
+    l.meetingUrl ||
+    l.meetingLink ||
+    l.joinUrl ||
+    l.zoomLink ||
+    l.googleMeetLink ||
+    l.liveUrl ||
+    null;
+
+  const handleStartLive = (lecture: any) => {
+    const url = getMeetingUrl(lecture);
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      setLinkInput('');
+      setLiveDialog(lecture);
+    }
+  };
+
+  const handleSaveAndStart = () => {
+    const url = linkInput.trim();
+    if (!url || !liveDialog) return;
+    setSaving(true);
+
+    // Save the link to the class record then open it
+    const updated = { ...liveDialog, meetingUrl: url };
+    put(
+      `${remoteRoutes.timetable}/${liveDialog.id}`,
+      updated,
+      () => {
+        setSaving(false);
+        setLectures((prev) =>
+          prev.map((l) =>
+            l.id === liveDialog.id ? { ...l, meetingUrl: url } : l,
+          ),
+        );
+        setLiveDialog(null);
+        window.open(url, '_blank', 'noopener,noreferrer');
+      },
+      undefined,
+      () => {
+        setSaving(false);
+        // Even if save failed, still open the link
+        setLiveDialog(null);
+        window.open(url, '_blank', 'noopener,noreferrer');
+      },
+    );
+  };
 
   return (
     <Layout>
@@ -196,85 +310,160 @@ const TrainerLectures = () => {
             No lectures found
           </Typography>
         ) : (
-          filtered.map((l: any, i: number) => (
-            <div key={l.id || i} className={classes.lectureCard}>
-              <div className={classes.lectureInfo}>
-                <div>
-                  {l.courseCode && (
-                    <span className={classes.courseCodeBadge}>
-                      {l.courseCode}
-                    </span>
-                  )}
-                  {l.isOnline && (
-                    <span
-                      style={{
-                        ...{},
-                        background: 'rgba(16,185,129,0.1)',
-                        color: '#10b981',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        borderRadius: 5,
-                        padding: '1px 7px',
-                        marginRight: 6,
-                      }}
+          filtered.map((l: any, i: number) => {
+            const hasLink = !!getMeetingUrl(l);
+            return (
+              <div key={l.id || i} className={classes.lectureCard}>
+                <div className={classes.lectureInfo}>
+                  <div>
+                    {l.courseCode && (
+                      <span className={classes.courseCodeBadge}>
+                        {l.courseCode}
+                      </span>
+                    )}
+                    {l.isOnline && (
+                      <span
+                        style={{
+                          background: 'rgba(16,185,129,0.1)',
+                          color: GREEN,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          borderRadius: 5,
+                          padding: '1px 7px',
+                          marginRight: 6,
+                        }}
+                      >
+                        Online
+                      </span>
+                    )}
+                    {hasLink ? (
+                      <span className={classes.liveBadge}>Live Ready</span>
+                    ) : (
+                      <span className={classes.upcomingBadge}>Upcoming</span>
+                    )}
+                  </div>
+                  <div className={classes.lectureTitle}>
+                    {l.title || l.name || 'Lecture'}
+                  </div>
+                  <div className={classes.lectureCourseName}>
+                    {l.courseName || l.course?.title || ''}
+                  </div>
+                  <div className={classes.lectureMeta}>
+                    {l.date && (
+                      <span className={classes.metaItem}>
+                        <CalendarTodayIcon style={{ fontSize: 13 }} />
+                        {l.date}
+                      </span>
+                    )}
+                    {(l.startTime || l.duration) && (
+                      <span className={classes.metaItem}>
+                        <AccessTimeIcon style={{ fontSize: 13 }} />
+                        {l.startTime}
+                        {l.duration ? ` · ${l.duration}` : ''}
+                      </span>
+                    )}
+                    {l.room && (
+                      <span className={classes.metaItem}>
+                        <RoomIcon style={{ fontSize: 13 }} />
+                        {l.room}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className={classes.actions}>
+                  {/* Start Live Class — primary CTA */}
+                  <Button
+                    variant="contained"
+                    className={classes.liveBtn}
+                    disableElevation
+                    size="small"
+                    startIcon={<VideocamIcon style={{ fontSize: 15 }} />}
+                    onClick={() => handleStartLive(l)}
+                  >
+                    {hasLink ? 'Start Live Class' : 'Set Up & Go Live'}
+                  </Button>
+
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <Button
+                      variant="contained"
+                      className={classes.viewBtn}
+                      disableElevation
+                      size="small"
+                      onClick={() =>
+                        l.id && history.push(`${localRoutes.classes}/${l.id}`)
+                      }
                     >
-                      Online
-                    </span>
-                  )}
-                  <span className={classes.upcomingBadge}>Upcoming</span>
-                </div>
-                <div className={classes.lectureTitle}>
-                  {l.title || l.name || 'Lecture'}
-                </div>
-                <div className={classes.lectureCourseName}>
-                  {l.courseName || l.course?.title || ''}
-                </div>
-                <div className={classes.lectureMeta}>
-                  {l.date && (
-                    <span className={classes.metaItem}>
-                      <CalendarTodayIcon style={{ fontSize: 13 }} />
-                      {l.date}
-                    </span>
-                  )}
-                  {(l.startTime || l.duration) && (
-                    <span className={classes.metaItem}>
-                      <AccessTimeIcon style={{ fontSize: 13 }} />
-                      {l.startTime}
-                      {l.duration ? ` · ${l.duration}` : ''}
-                    </span>
-                  )}
-                  {l.room && (
-                    <span className={classes.metaItem}>
-                      <RoomIcon style={{ fontSize: 13 }} />
-                      {l.room}
-                    </span>
-                  )}
+                      View Details
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      className={classes.editBtn}
+                      size="small"
+                    >
+                      Edit
+                    </Button>
+                  </div>
                 </div>
               </div>
-              <div className={classes.actions}>
-                <Button
-                  variant="contained"
-                  className={classes.viewBtn}
-                  disableElevation
-                  size="small"
-                  onClick={() =>
-                    l.id && history.push(`${localRoutes.classes}/${l.id}`)
-                  }
-                >
-                  View Details
-                </Button>
-                <Button
-                  variant="outlined"
-                  className={classes.editBtn}
-                  size="small"
-                >
-                  Edit
-                </Button>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
+
+      {/* ── Start Live Class dialog ── */}
+      <Dialog
+        open={!!liveDialog}
+        onClose={() => setLiveDialog(null)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ style: { borderRadius: 14 } }}
+      >
+        <DialogTitle disableTypography style={{ paddingBottom: 4 }}>
+          <div className={classes.dlgTitle}>Start Live Class</div>
+          <div className={classes.dlgSub}>
+            {liveDialog?.title || liveDialog?.name || 'Lecture'}
+          </div>
+        </DialogTitle>
+        <DialogContent>
+          <Typography
+            style={{ fontSize: 13, color: '#5a5e6b', marginBottom: 16 }}
+          >
+            Paste your meeting link below (Zoom, Google Meet, Microsoft Teams,
+            etc.) and students will be able to join from their dashboard.
+          </Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            variant="outlined"
+            size="small"
+            label="Meeting link"
+            placeholder="https://zoom.us/j/..."
+            value={linkInput}
+            onChange={(e) => setLinkInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSaveAndStart()}
+            inputProps={{ style: { fontSize: 13 } }}
+          />
+        </DialogContent>
+        <DialogActions style={{ padding: '12px 20px 20px' }}>
+          <Button
+            className={classes.dlgCancelBtn}
+            onClick={() => setLiveDialog(null)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            className={classes.dlgSaveBtn}
+            disableElevation
+            disabled={!linkInput.trim() || saving}
+            startIcon={<VideocamIcon style={{ fontSize: 15 }} />}
+            onClick={handleSaveAndStart}
+          >
+            {saving ? 'Saving…' : 'Save & Go Live'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Layout>
   );
 };

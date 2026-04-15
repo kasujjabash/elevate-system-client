@@ -33,7 +33,6 @@ import EmojiEventsIcon from '@material-ui/icons/EmojiEvents';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import ExpandLessIcon from '@material-ui/icons/ExpandLess';
 import VideoCallIcon from '@material-ui/icons/VideoCall';
-import { useHistory, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import Layout from '../../components/layout/Layout';
 import { get, post, del, search } from '../../utils/ajax';
@@ -362,9 +361,8 @@ function initials(name: string) {
 }
 
 // ── Course List ───────────────────────────────────────────────────────────────
-const CourseList = () => {
+const CourseList = ({ onManage }: { onManage: (course: any) => void }) => {
   const classes = useStyles();
-  const history = useHistory();
   const user = useSelector((state: IState) => state.core.user);
   const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -379,6 +377,9 @@ const CourseList = () => {
 
     // Phase 1: look up this trainer's record in the instructor table to get the
     // correct instructorId (the course table uses instructor table IDs, NOT contactId/userId)
+    console.log('Loading courses for user:', user); // Debug log
+    console.log('Searching with sid:', sid, 'userName:', userName); // Debug log
+
     search(
       remoteRoutes.courseInstructors,
       {},
@@ -386,6 +387,8 @@ const CourseList = () => {
         const instructors: any[] = Array.isArray(iData)
           ? iData
           : iData?.data || [];
+        console.log('Found instructors:', instructors); // Debug log
+
         // Match by contactId/id first, then fall back to name
         const myRecord = instructors.find((i: any) => {
           if (
@@ -398,7 +401,10 @@ const CourseList = () => {
             return true;
           return false;
         });
+
+        console.log('Matched instructor record:', myRecord); // Debug log
         const instructorId = myRecord?.id ?? sid;
+        console.log('Using instructor ID:', instructorId); // Debug log
 
         // Phase 2: fetch courses scoped to the resolved instructor ID
         search(
@@ -406,25 +412,43 @@ const CourseList = () => {
           { instructorId, limit: 200 },
           (data: any) => {
             const list: any[] = Array.isArray(data) ? data : data?.data || [];
+            console.log('Found courses for instructor:', list); // Debug log
             setCourses(list);
             setLoading(false);
           },
-          () => setLoading(false),
-          () => setLoading(false),
+          (error: any) => {
+            console.error('Error loading courses:', error); // Debug log
+            Toast.error('Failed to load your courses. Please contact admin.');
+            setLoading(false);
+          },
+          () => {
+            console.error('Course loading failed (no error details)'); // Debug log
+            Toast.error('Unable to load courses. Please try again.');
+            setLoading(false);
+          },
         );
       },
       // Instructor list request failed — fall back to raw user ID
-      () => {
+      (error: any) => {
+        console.error('Error loading instructors, falling back:', error); // Debug log
         search(
           remoteRoutes.courses,
           { instructorId: sid, limit: 200 },
           (data: any) => {
             const list: any[] = Array.isArray(data) ? data : data?.data || [];
+            console.log('Fallback courses found:', list); // Debug log
             setCourses(list);
             setLoading(false);
           },
-          () => setLoading(false),
-          () => setLoading(false),
+          (error: any) => {
+            console.error('Fallback course loading failed:', error); // Debug log
+            Toast.error('Failed to load courses. Please contact admin.');
+            setLoading(false);
+          },
+          () => {
+            console.error('Fallback course loading failed (no error details)'); // Debug log
+            setLoading(false);
+          },
         );
       },
     );
@@ -626,9 +650,7 @@ const CourseList = () => {
                         boxShadow: 'none',
                         flex: 1,
                       }}
-                      onClick={() =>
-                        history.push(`${localRoutes.trainerCourses}/${c.id}`)
-                      }
+                      onClick={() => onManage(c)}
                     >
                       Manage →
                     </Button>
@@ -644,9 +666,14 @@ const CourseList = () => {
 };
 
 // ── Course Detail ─────────────────────────────────────────────────────────────
-const CourseDetail = ({ courseId }: { courseId: number }) => {
+const CourseDetail = ({
+  courseId,
+  onBack,
+}: {
+  courseId: number;
+  onBack: () => void;
+}) => {
   const classes = useStyles();
-  const history = useHistory();
   const [course, setCourse] = useState<any>(null);
   const [resources, setResources] = useState<any[]>([]);
   const [trainerStats, setTrainerStats] = useState<any>({});
@@ -771,14 +798,27 @@ const CourseDetail = ({ courseId }: { courseId: number }) => {
   };
 
   const loadData = () => {
+    console.log('Loading course details for courseId:', courseId); // Debug log
     get(
       `${remoteRoutes.courses}/${courseId}`,
       (data: any) => {
+        console.log('Course data received:', data); // Debug log
         setCourse(data);
         setLoading(false);
       },
-      undefined,
-      () => setLoading(false),
+      (error: any) => {
+        console.error('Error loading course:', error); // Debug log
+        console.error('Course ID that failed:', courseId); // Debug log
+        Toast.error(
+          `Failed to load course details: ${error?.message || 'Unknown error'}`,
+        );
+        setLoading(false);
+      },
+      () => {
+        console.error('Course loading failed (no error details)'); // Debug log
+        Toast.error('Unable to load course. Please check your permissions.');
+        setLoading(false);
+      },
     );
     get(`${remoteRoutes.courses}/${courseId}/resources`, (data: any) =>
       setResources(Array.isArray(data) ? data : []),
@@ -857,7 +897,37 @@ const CourseDetail = ({ courseId }: { courseId: number }) => {
       </div>
     );
   if (!course)
-    return <Typography style={{ padding: 40 }}>Course not found.</Typography>;
+    return (
+      <div style={{ padding: 40, textAlign: 'center' }}>
+        <Typography
+          style={{
+            fontSize: 16,
+            fontWeight: 600,
+            color: '#f87171',
+            marginBottom: 8,
+          }}
+        >
+          Course not found
+        </Typography>
+        <Typography
+          style={{ fontSize: 14, color: '#6b7280', marginBottom: 16 }}
+        >
+          This course may not exist or you may not have permission to access it.
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={onBack}
+          style={{
+            background: CORAL,
+            color: '#fff',
+            textTransform: 'none',
+            borderRadius: 8,
+          }}
+        >
+          ← Back to Courses
+        </Button>
+      </div>
+    );
 
   const enrollments: any[] = course.enrollments || [];
 
@@ -865,10 +935,7 @@ const CourseDetail = ({ courseId }: { courseId: number }) => {
     <div className={classes.root}>
       <div className={classes.pageHeader}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <IconButton
-            size="small"
-            onClick={() => history.push(localRoutes.trainerCourses)}
-          >
+          <IconButton size="small" onClick={onBack}>
             <ArrowBackIcon fontSize="small" />
           </IconButton>
           <div>
@@ -1589,13 +1656,21 @@ const CourseDetail = ({ courseId }: { courseId: number }) => {
 
 // ── Router wrapper ────────────────────────────────────────────────────────────
 const TrainerCourses = () => {
-  const { courseId } = useParams<{ courseId?: string }>();
+  const [selectedCourse, setSelectedCourse] = useState<any>(null);
   return (
     <Layout>
-      {courseId ? (
-        <CourseDetail courseId={parseInt(courseId, 10)} />
+      {selectedCourse ? (
+        <CourseDetail
+          courseId={selectedCourse.id}
+          onBack={() => setSelectedCourse(null)}
+        />
       ) : (
-        <CourseList />
+        <CourseList
+          onManage={(course) => {
+            console.log('Course selected for management:', course); // Debug log
+            setSelectedCourse(course);
+          }}
+        />
       )}
     </Layout>
   );

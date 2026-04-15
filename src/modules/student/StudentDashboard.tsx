@@ -405,11 +405,12 @@ const StudentDashboard = () => {
     }
   }, [user?.contactId, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-scroll announcements
+  // Auto-scroll announcements (real or default 3)
   useEffect(() => {
-    if (announcements.length <= 1) return;
+    const total = announcements.length > 0 ? announcements.length : 3;
+    if (total <= 1) return;
     const timer = setInterval(() => {
-      setAnnouncementIdx((i) => (i + 1) % announcements.length);
+      setAnnouncementIdx((i) => (i + 1) % total);
     }, 4000);
     return () => clearInterval(timer);
   }, [announcements.length]);
@@ -522,20 +523,47 @@ const StudentDashboard = () => {
                 )}
               </div>
             ) : (
-              <div className={classes.bannerContent}>
-                <Typography className={classes.reminderTitle}>
-                  Class &amp; Assessment Reminders
-                </Typography>
-                <Typography className={classes.reminderText}>
-                  Stay on top of your schedule. Upcoming classes and exam dates
-                  are now highlighted in your dashboard to help you plan ahead.
-                </Typography>
-                <div className={classes.reminderDots}>
-                  <div className={classes.dotActive} />
-                  <div className={classes.dot} />
-                  <div className={classes.dot} />
-                </div>
-              </div>
+              (() => {
+                const defaults = [
+                  {
+                    title: 'Class & Assessment Reminders',
+                    message:
+                      'Stay on top of your schedule. Upcoming classes and exam dates are highlighted in your dashboard to help you plan ahead.',
+                  },
+                  {
+                    title: 'Attendance Registration Required',
+                    message:
+                      'You are required to register your attendance for every class. Use the Check-In feature before or during each session to stay compliant.',
+                  },
+                  {
+                    title: 'Punctuality Matters',
+                    message:
+                      'Please ensure you attend all classes on time. Late arrivals disrupt learning and may affect your attendance record.',
+                  },
+                ];
+                const idx = announcementIdx % defaults.length;
+                return (
+                  <div key={idx} className={classes.bannerContent}>
+                    <Typography className={classes.reminderTitle}>
+                      {defaults[idx].title}
+                    </Typography>
+                    <Typography className={classes.reminderText}>
+                      {defaults[idx].message}
+                    </Typography>
+                    <div className={classes.reminderDots}>
+                      {defaults.map((_: any, i: number) => (
+                        <div
+                          key={i}
+                          className={
+                            i === idx ? classes.dotActive : classes.dot
+                          }
+                          onClick={() => setAnnouncementIdx(i)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()
             )}
           </div>
 

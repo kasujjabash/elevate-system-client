@@ -44,7 +44,7 @@ const useStyles = makeStyles((theme: Theme) => ({
     overflow: 'hidden',
   },
   bannerTitle: {
-    fontSize: 16,
+    fontSize: 22,
     fontWeight: 700,
     color: '#fff',
     marginBottom: 5,

@@ -202,7 +202,7 @@ const useStyles = makeStyles((theme: Theme) => ({
   // ── Player modal ───────────────────────────────────────────────────────────
   playerDialog: {
     '& .MuiDialog-paper': {
-      borderRadius: 14,
+      borderRadius: 16,
       overflow: 'hidden',
       maxWidth: 860,
     },
@@ -211,16 +211,44 @@ const useStyles = makeStyles((theme: Theme) => ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    padding: '16px 20px 12px',
+    padding: '18px 20px 14px',
     background: '#fff',
     gap: 12,
   },
-  playerTitle: { fontSize: 16, fontWeight: 700, color: DARK, flex: 1 },
+  playerTitle: {
+    fontSize: 17,
+    fontWeight: 800,
+    color: DARK,
+    flex: 1,
+    lineHeight: 1.3,
+  },
+  playerMeta: {
+    display: 'flex',
+    alignItems: 'center',
+    flexWrap: 'wrap' as any,
+    gap: 8,
+    padding: '0 20px 14px',
+    background: '#fff',
+  },
+  playerTag: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 20,
+    padding: '4px 12px',
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: '0.03em',
+  },
   playerDesc: {
     fontSize: 13,
-    color: '#8a8f99',
-    lineHeight: 1.5,
-    padding: '0 20px 16px',
+    color: '#5a5e6b',
+    lineHeight: 1.7,
+    padding: '14px 20px 20px',
+    borderTop: '1px solid rgba(0,0,0,0.06)',
+    background: '#fafbfc',
+    margin: 0,
+    whiteSpace: 'pre-line' as any,
   },
   iframeWrap: {
     position: 'relative' as any,
@@ -472,12 +500,58 @@ const Workshops = () => {
           fullWidth
           className={classes.playerDialog}
         >
+          {/* Header */}
           <div className={classes.playerHeader}>
             <div className={classes.playerTitle}>{playing?.title || ''}</div>
             <IconButton size="small" onClick={() => setPlaying(null)}>
               <CloseIcon fontSize="small" />
             </IconButton>
           </div>
+
+          {/* Tags row */}
+          {playing &&
+            (() => {
+              const type: 'workshop' | 'podcast' =
+                playing.type === 'podcast' ? 'podcast' : 'workshop';
+              const meta = TYPE_META[type];
+              const Icon = meta.Icon;
+              return (
+                <div className={classes.playerMeta}>
+                  {/* Type tag */}
+                  <span
+                    className={classes.playerTag}
+                    style={{ background: meta.bg, color: meta.color }}
+                  >
+                    <Icon style={{ fontSize: 12 }} />
+                    {meta.label}
+                  </span>
+                  {/* Course tag */}
+                  {playing.courseName && (
+                    <span
+                      className={classes.playerTag}
+                      style={{
+                        background: 'rgba(254,58,106,0.08)',
+                        color: CORAL,
+                      }}
+                    >
+                      {playing.courseName}
+                    </span>
+                  )}
+                  {/* Date tag */}
+                  {playing.createdAt && (
+                    <span
+                      className={classes.playerTag}
+                      style={{
+                        background: 'rgba(0,0,0,0.04)',
+                        color: '#8a8f99',
+                      }}
+                    >
+                      {fmtDate(playing.createdAt)}
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
 
           {/* YouTube embed */}
           {playingId ? (
@@ -495,7 +569,6 @@ const Workshops = () => {
               style={{
                 padding: '40px 20px',
                 textAlign: 'center',
-                color: '#8a8f99',
                 background: '#1a1a2e',
               }}
             >
@@ -507,6 +580,7 @@ const Workshops = () => {
             </div>
           )}
 
+          {/* Description */}
           {playing?.description && (
             <div className={classes.playerDesc}>{playing.description}</div>
           )}

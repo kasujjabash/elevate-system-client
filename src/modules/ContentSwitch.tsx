@@ -267,6 +267,10 @@ const ContentSwitch = () => {
             component={TeacherAssignments}
           />
           <Route path={localRoutes.adminCourses} component={AdminCourses} />
+          <Route
+            path={localRoutes.trainerCourseDetail}
+            component={TrainerCourses}
+          />
           <Route path={localRoutes.trainerCourses} component={TrainerCourses} />
           <Route
             path={localRoutes.trainerStudents}

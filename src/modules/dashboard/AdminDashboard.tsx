@@ -32,7 +32,7 @@ const useStyles = makeStyles((theme: Theme) => ({
     [theme.breakpoints.down('xs')]: { padding: '16px 18px' },
   },
   bannerTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: 700,
     color: '#fff',
     marginBottom: 2,

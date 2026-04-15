@@ -355,6 +355,7 @@ const CourseChat = () => {
   const myName = user?.fullName || 'Me';
   const bottomRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fetchedIdsRef = useRef<Set<string>>(new Set());
 
   const [rooms, setRooms] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
@@ -368,13 +369,37 @@ const CourseChat = () => {
   const [contactQuery, setContactQuery] = useState('');
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [search, setSearch] = useState('');
+  // Cache for fetched user names: userId → name
+  const [resolvedNames, setResolvedNames] = useState<Record<string, string>>(
+    {},
+  );
 
-  // Broadcast unread count to NavMenu (same-tab custom event + localStorage)
+  // Mark a room as seen (called when user opens it)
+  const markRoomSeen = (roomId: any) => {
+    localStorage.setItem(
+      `elevate_chat_seen_${roomId}`,
+      new Date().toISOString(),
+    );
+  };
+
+  // Returns true if any room has messages newer than what the user last saw
+  const computeHasNew = (roomList: any[]): boolean =>
+    roomList.some((r) => {
+      const lastAt = r.lastMessageAt;
+      if (!lastAt) return false;
+      const seen = localStorage.getItem(`elevate_chat_seen_${r.id}`);
+      if (!seen) return true; // never opened
+      return new Date(lastAt) > new Date(seen);
+    });
+
+  // Broadcast unread count + "has new" flag to NavMenu
   const broadcastUnread = (roomList: any[]) => {
     const total = roomList.reduce((sum, r) => sum + (r.unreadCount || 0), 0);
+    const hasNew = total > 0 || computeHasNew(roomList);
     localStorage.setItem('elevate_chat_unread', String(total));
+    localStorage.setItem('elevate_chat_has_new', hasNew ? '1' : '0');
     window.dispatchEvent(
-      new CustomEvent('chatUnreadUpdate', { detail: total }),
+      new CustomEvent('chatUnreadUpdate', { detail: { count: total, hasNew } }),
     );
   };
 
@@ -402,6 +427,67 @@ const CourseChat = () => {
     );
   }, []);
 
+  // Resolve names for direct-room participants that have no name data
+  useEffect(() => {
+    if (!rooms.length) return;
+    const directRms = rooms.filter((r) => !isGroupRoom(r));
+    directRms.forEach((room) => {
+      const parts: any[] = room.participants || [];
+      const other =
+        parts.find(
+          (p: any) => String(p.id || p.contactId || p.userId) !== myId,
+        ) ||
+        parts[0] ||
+        {};
+      const otherId = String(other.id || other.contactId || other.userId || '');
+      if (!otherId) return;
+      if (fetchedIdsRef.current.has(otherId)) return;
+      // Skip if participant already carries name data
+      if (other.fullName || other.name || other.displayName || other.firstName)
+        return;
+      // Skip if contacts list already has them
+      const inContacts = contacts.find(
+        (c: any) =>
+          String(c.id || c.contactId) === otherId ||
+          String(c.userId) === otherId,
+      );
+      if (inContacts) return;
+      // Mark as fetched to avoid duplicate requests
+      fetchedIdsRef.current.add(otherId);
+      // Try the users endpoint; on error fall back to students endpoint
+      const extractName = (data: any): string | null =>
+        data?.fullName ||
+        data?.name ||
+        data?.displayName ||
+        (data?.firstName
+          ? `${data.firstName} ${data.lastName || ''}`.trim()
+          : null) ||
+        data?.username ||
+        (data?.email ? data.email.split('@')[0] : null) ||
+        null;
+
+      get(
+        `${remoteRoutes.users}/${otherId}`,
+        (data: any) => {
+          const name = extractName(data);
+          if (name) setResolvedNames((prev) => ({ ...prev, [otherId]: name }));
+        },
+        () => {
+          // Users endpoint failed — try students endpoint
+          get(
+            `${remoteRoutes.students}/${otherId}`,
+            (data: any) => {
+              const name = extractName(data);
+              if (name)
+                setResolvedNames((prev) => ({ ...prev, [otherId]: name }));
+            },
+            () => {},
+          );
+        },
+      );
+    });
+  }, [rooms, contacts]);
+
   // Fetch messages & poll when active room changes
   useEffect(() => {
     if (pollRef.current) clearInterval(pollRef.current);
@@ -415,8 +501,35 @@ const CourseChat = () => {
       get(
         `${remoteRoutes.chatRooms}/${activeRoom.id}/messages`,
         (data: any) => {
-          setMessages(Array.isArray(data) ? data : []);
+          const msgs: any[] = Array.isArray(data) ? data : [];
+          setMessages(msgs);
           if (initial) setLoadingMsgs(false);
+
+          // Cache the other person's name from message senderName so the
+          // conversation list shows it immediately (same data the bubbles use)
+          if (!isGroupRoom(activeRoom)) {
+            const otherMsg = msgs.find(
+              (m: any) => String(m.senderId || m.sender?.id) !== myId,
+            );
+            if (otherMsg) {
+              const otherId = String(
+                otherMsg.senderId || otherMsg.sender?.id || '',
+              );
+              const name =
+                otherMsg.senderName ||
+                otherMsg.sender?.fullName ||
+                otherMsg.sender?.name ||
+                (otherMsg.sender?.firstName
+                  ? `${otherMsg.sender.firstName} ${
+                      otherMsg.sender.lastName || ''
+                    }`.trim()
+                  : null) ||
+                null;
+              if (otherId && name) {
+                setResolvedNames((prev) => ({ ...prev, [otherId]: name }));
+              }
+            }
+          }
         },
         undefined,
         () => {
@@ -521,6 +634,7 @@ const CourseChat = () => {
           return exists ? prev : [room, ...prev];
         });
         setActiveRoom(room);
+        markRoomSeen(room.id);
       },
       undefined,
       () => setCreatingRoom(false),
@@ -572,6 +686,7 @@ const CourseChat = () => {
     const merged: any = { ...roomLevel, ...other, ...(fromContacts || {}) };
 
     const name =
+      resolvedNames[otherId] ||
       merged.fullName ||
       merged.name ||
       merged.displayName ||
@@ -671,7 +786,11 @@ const CourseChat = () => {
                             className={`${classes.conversation} ${
                               isActive ? classes.conversationActive : ''
                             }`}
-                            onClick={() => setActiveRoom(room)}
+                            onClick={() => {
+                              setActiveRoom(room);
+                              markRoomSeen(room.id);
+                              broadcastUnread(rooms);
+                            }}
                           >
                             <div
                               style={{ position: 'relative', flexShrink: 0 }}
@@ -784,7 +903,11 @@ const CourseChat = () => {
                             className={`${classes.conversation} ${
                               isActive ? classes.conversationActive : ''
                             }`}
-                            onClick={() => setActiveRoom(room)}
+                            onClick={() => {
+                              setActiveRoom(room);
+                              markRoomSeen(room.id);
+                              broadcastUnread(rooms);
+                            }}
                           >
                             <div
                               className={classes.convAvatar}

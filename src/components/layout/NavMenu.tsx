@@ -42,30 +42,48 @@ import { get } from '../../utils/ajax';
 import { remoteRoutes } from '../../data/constants';
 import elevateLogo from '../../assets/images/elevate-logo.png';
 
-// ── Shows unread chat count — updated by CourseChat via custom event ──────────
+// ── Shows new-message indicator — updated by CourseChat via custom event ──────
 const ChatUnreadBadge: React.FC = () => {
-  const [count, setCount] = useState<number>(() => {
-    const stored = localStorage.getItem('elevate_chat_unread');
-    return stored ? parseInt(stored, 10) || 0 : 0;
-  });
+  const readStorage = () => {
+    const count =
+      parseInt(localStorage.getItem('elevate_chat_unread') || '0', 10) || 0;
+    const hasNew = localStorage.getItem('elevate_chat_has_new') === '1';
+    return { count, hasNew };
+  };
+
+  const [state, setState] = useState(readStorage);
 
   useEffect(() => {
-    // Listen for same-tab updates dispatched by CourseChat
+    // Listen for same-tab updates from CourseChat
     const onEvent = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      setCount(typeof detail === 'number' ? detail : 0);
+      if (detail && typeof detail === 'object') {
+        setState({ count: detail.count || 0, hasNew: !!detail.hasNew });
+      } else {
+        setState(readStorage());
+      }
     };
     window.addEventListener('chatUnreadUpdate', onEvent);
 
-    // Fallback: poll API every 60 s (handles other-tab changes too)
+    // Poll every 60 s to catch other-tab activity
     const poll = () => {
       get(
         remoteRoutes.chatRooms,
         (data: any) => {
           const rooms: any[] = Array.isArray(data) ? data : [];
           const total = rooms.reduce((sum, r) => sum + (r.unreadCount || 0), 0);
+          const hasNew =
+            total > 0 ||
+            rooms.some((r) => {
+              const lastAt = r.lastMessageAt;
+              if (!lastAt) return false;
+              const seen = localStorage.getItem(`elevate_chat_seen_${r.id}`);
+              if (!seen) return true;
+              return new Date(lastAt) > new Date(seen);
+            });
           localStorage.setItem('elevate_chat_unread', String(total));
-          setCount(total);
+          localStorage.setItem('elevate_chat_has_new', hasNew ? '1' : '0');
+          setState({ count: total, hasNew });
         },
         undefined,
         () => {},
@@ -80,29 +98,46 @@ const ChatUnreadBadge: React.FC = () => {
     };
   }, []);
 
-  if (count <= 0) return null;
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#fe3a6a',
-        color: '#fff',
-        borderRadius: 10,
-        fontSize: 9,
-        fontWeight: 700,
-        minWidth: 16,
-        height: 16,
-        padding: '0 4px',
-        marginLeft: 6,
-        lineHeight: 1,
-        flexShrink: 0,
-      }}
-    >
-      {count > 99 ? '99+' : count}
-    </span>
-  );
+  if (state.count > 0) {
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#fe3a6a',
+          color: '#fff',
+          borderRadius: 10,
+          fontSize: 9,
+          fontWeight: 700,
+          minWidth: 16,
+          height: 16,
+          padding: '0 4px',
+          marginLeft: 6,
+          lineHeight: 1,
+          flexShrink: 0,
+        }}
+      >
+        {state.count > 99 ? '99+' : state.count}
+      </span>
+    );
+  }
+  if (state.hasNew) {
+    return (
+      <span
+        style={{
+          display: 'inline-block',
+          width: 7,
+          height: 7,
+          borderRadius: '50%',
+          background: '#fe3a6a',
+          marginLeft: 7,
+          flexShrink: 0,
+        }}
+      />
+    );
+  }
+  return null;
 };
 
 interface IAppRoute {

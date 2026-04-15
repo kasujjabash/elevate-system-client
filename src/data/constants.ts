@@ -161,6 +161,7 @@ export const localRoutes = {
   adminCourses: '/admin/courses',
   adminWorkshops: '/admin/workshops',
   trainerCourses: '/trainer/courses',
+  trainerCourseDetail: '/trainer/courses/:courseId',
   trainerStudents: '/trainer/students',
   trainerLectures: '/trainer/lectures',
   trainerResources: '/trainer/resources',

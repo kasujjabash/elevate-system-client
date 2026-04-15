@@ -48,7 +48,7 @@ const useStyles = makeStyles((theme: Theme) => ({
   },
   bannerInner: { position: 'relative' as any, zIndex: 1 },
   bannerTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: 700,
     color: '#fff',
     marginBottom: 4,
