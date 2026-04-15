@@ -5,13 +5,13 @@ import Drawer from '@material-ui/core/Drawer';
 import Hidden from '@material-ui/core/Hidden';
 import IconButton from '@material-ui/core/IconButton';
 import MenuIcon from '@material-ui/icons/Menu';
-import NotificationsNoneIcon from '@material-ui/icons/NotificationsNone';
 import HowToRegIcon from '@material-ui/icons/HowToReg';
 import Toolbar from '@material-ui/core/Toolbar';
 import { Typography } from '@material-ui/core';
 import { BarView } from '../Profile';
 import { useStyles } from './styles';
 import NavMenu from './NavMenu';
+import NotificationBell from './NotificationBell';
 import { useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { IState } from '../../data/types';
@@ -92,14 +92,9 @@ function Layout(props: IProps) {
             </Typography>
           )}
 
-          {student || trainer ? (
-            <IconButton
-              size="small"
-              style={{ color: '#8a8f99', marginRight: 4 }}
-            >
-              <NotificationsNoneIcon style={{ fontSize: 22 }} />
-            </IconButton>
-          ) : (
+          <NotificationBell />
+
+          {!student && !trainer && (
             <IconButton
               size="small"
               style={{ color: '#8a8f99', marginRight: 4 }}

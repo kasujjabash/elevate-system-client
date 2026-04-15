@@ -21,20 +21,27 @@ import { search } from '../../utils/ajax';
 const CORAL = '#fe3a6a';
 const DARK = '#1f2025';
 
-const HOURS = [
-  '08:00 AM',
-  '09:00 AM',
-  '10:00 AM',
-  '11:00 AM',
-  '12:00 PM',
-  '01:00 PM',
-  '02:00 PM',
-  '03:00 PM',
-  '04:00 PM',
-  '05:00 PM',
-  '06:00 PM',
-];
+const START_HOUR = 8; // 8 AM
+const END_HOUR = 20; // 8 PM
+const PX_PER_HOUR = 64;
+const GRID_HEIGHT = (END_HOUR - START_HOUR) * PX_PER_HOUR; // 768 px
+
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+// Build time-label rows (one per hour)
+const TIME_LABELS: { label: string; top: number }[] = [];
+for (let h = START_HOUR; h <= END_HOUR; h++) {
+  const top = (h - START_HOUR) * PX_PER_HOUR;
+  const label =
+    h === 0
+      ? '12:00 AM'
+      : h < 12
+      ? `${h}:00 AM`
+      : h === 12
+      ? '12:00 PM'
+      : `${h - 12}:00 PM`;
+  TIME_LABELS.push({ label, top });
+}
 
 const useStyles = makeStyles((theme: Theme) => ({
   root: {
@@ -140,10 +147,12 @@ const useStyles = makeStyles((theme: Theme) => ({
     overflowX: 'auto' as any,
     [theme.breakpoints.down('sm')]: { width: '100%' },
   },
+  // Outer grid: header row + body row
   grid: {
     display: 'grid',
-    gridTemplateColumns: '72px repeat(7, 1fr)',
-    minWidth: 640,
+    gridTemplateColumns: '68px repeat(7, 1fr)',
+    gridTemplateRows: 'auto 1fr',
+    minWidth: 600,
   },
   headerCell: {
     padding: '10px 6px',
@@ -153,36 +162,56 @@ const useStyles = makeStyles((theme: Theme) => ({
     color: '#8a8f99',
     borderBottom: '1px solid rgba(0,0,0,0.07)',
     background: '#fafafa',
+    position: 'sticky' as any,
+    top: 0,
+    zIndex: 1,
   },
-  timeCell: {
-    padding: '8px 10px',
-    fontSize: 11,
-    color: '#8a8f99',
-    borderRight: '1px solid rgba(0,0,0,0.06)',
-    borderBottom: '1px solid rgba(0,0,0,0.05)',
-    whiteSpace: 'nowrap' as any,
-    height: 52,
-    display: 'flex',
-    alignItems: 'center',
-  },
-  dayCell: {
-    borderRight: '1px solid rgba(0,0,0,0.05)',
-    borderBottom: '1px solid rgba(0,0,0,0.05)',
-    height: 52,
-    padding: 4,
+  // Time-label column
+  timeCol: {
     position: 'relative' as any,
+    height: GRID_HEIGHT,
+    borderRight: '1px solid rgba(0,0,0,0.07)',
+    background: '#fafafa',
   },
+  timeLabel: {
+    position: 'absolute' as any,
+    right: 8,
+    fontSize: 10,
+    color: '#9ca3af',
+    transform: 'translateY(-50%)',
+    whiteSpace: 'nowrap' as any,
+  },
+  // Each day column
+  dayCol: {
+    position: 'relative' as any,
+    height: GRID_HEIGHT,
+    borderRight: '1px solid rgba(0,0,0,0.05)',
+  },
+  // Horizontal hour guide lines
+  hourLine: {
+    position: 'absolute' as any,
+    left: 0,
+    right: 0,
+    borderTop: '1px solid rgba(0,0,0,0.05)',
+    pointerEvents: 'none' as any,
+  },
+  // Event block — absolutely positioned, spans actual duration
   eventBlock: {
+    position: 'absolute' as any,
+    left: 4,
+    right: 4,
     background: 'rgba(254,58,106,0.10)',
     borderLeft: `3px solid ${CORAL}`,
-    borderRadius: 4,
-    padding: '3px 6px',
+    borderRadius: 5,
+    padding: '4px 7px',
     fontSize: 11,
     color: CORAL,
     fontWeight: 600,
-    lineHeight: 1.3,
-    height: '100%',
+    lineHeight: 1.35,
     overflow: 'hidden',
+    boxSizing: 'border-box' as any,
+    cursor: 'default',
+    '&:hover': { background: 'rgba(254,58,106,0.16)' },
   },
 
   sidebar: {
@@ -214,18 +243,20 @@ const useStyles = makeStyles((theme: Theme) => ({
   eventMeta: { fontSize: 11, color: '#8a8f99', lineHeight: 1.5 },
 }));
 
-const parseHour = (timeStr: string) => {
-  if (!timeStr) return 8;
+// Returns fractional hours (e.g. 9.5 for 9:30 AM)
+const parseTime = (timeStr: string): number => {
+  if (!timeStr) return START_HOUR;
   const ampm = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
   if (ampm) {
     let h = parseInt(ampm[1], 10);
+    const m = parseInt(ampm[2], 10);
     if (ampm[3].toUpperCase() === 'PM' && h !== 12) h += 12;
     if (ampm[3].toUpperCase() === 'AM' && h === 12) h = 0;
-    return h;
+    return h + m / 60;
   }
   const h24 = timeStr.match(/^(\d{1,2}):(\d{2})/);
-  if (h24) return parseInt(h24[1], 10);
-  return 8;
+  if (h24) return parseInt(h24[1], 10) + parseInt(h24[2], 10) / 60;
+  return START_HOUR;
 };
 
 const MyTimetable = () => {
@@ -363,32 +394,25 @@ const MyTimetable = () => {
   const weekEnd = addDays(weekStart, 6);
   const weekDates = DAYS.map((_, i) => addDays(weekStart, i));
 
-  const gridMap: Record<number, Record<number, any>> = {};
+  // Group sessions by day index (Mon=0 … Sun=6) for this week
+  const daySessions: Record<number, any[]> = {};
   sessions.forEach((s) => {
+    let dayIdx: number | null = null;
     if (s.dayOfWeek != null) {
-      const dayIdx = (Number(s.dayOfWeek) + 6) % 7;
-      const hourIdx = parseHour(s.startTime) - 8;
-      if (hourIdx >= 0 && hourIdx < HOURS.length) {
-        if (!gridMap[dayIdx]) gridMap[dayIdx] = {};
-        if (!gridMap[dayIdx][hourIdx]) gridMap[dayIdx][hourIdx] = s;
+      dayIdx = (Number(s.dayOfWeek) + 6) % 7;
+    } else {
+      const raw = s.startDate || s.date || s.sessionDate;
+      if (!raw) return;
+      try {
+        const d = typeof raw === 'string' ? parseISO(raw) : new Date(raw);
+        if (d >= weekStart && d <= weekEnd) dayIdx = (d.getDay() + 6) % 7;
+      } catch {
+        return;
       }
-      return;
     }
-    const raw = s.startDate || s.date || s.sessionDate;
-    if (!raw) return;
-    try {
-      const d = typeof raw === 'string' ? parseISO(raw) : new Date(raw);
-      if (d >= weekStart && d <= weekEnd) {
-        const dayIdx = (d.getDay() + 6) % 7;
-        const hourIdx =
-          (s.startTime ? parseHour(s.startTime) : d.getHours()) - 8;
-        if (hourIdx >= 0 && hourIdx < HOURS.length) {
-          if (!gridMap[dayIdx]) gridMap[dayIdx] = {};
-          if (!gridMap[dayIdx][hourIdx]) gridMap[dayIdx][hourIdx] = s;
-        }
-      }
-    } catch {
-      /* ignore */
+    if (dayIdx !== null) {
+      if (!daySessions[dayIdx]) daySessions[dayIdx] = [];
+      daySessions[dayIdx].push(s);
     }
   });
 
@@ -472,6 +496,7 @@ const MyTimetable = () => {
           {/* Grid */}
           <div className={classes.gridWrap}>
             <div className={classes.grid}>
+              {/* ── Header row ── */}
               <div className={classes.headerCell} />
               {DAYS.map((day, i) => (
                 <div key={day} className={classes.headerCell}>
@@ -482,43 +507,86 @@ const MyTimetable = () => {
                 </div>
               ))}
 
-              {HOURS.map((hour, hi) => (
-                <React.Fragment key={hour}>
-                  <div className={classes.timeCell}>{hour}</div>
-                  {DAYS.map((_, di) => {
-                    const ev = gridMap[di]?.[hi];
+              {/* ── Time-label column ── */}
+              <div className={classes.timeCol}>
+                {TIME_LABELS.map(({ label, top }) => (
+                  <div
+                    key={label}
+                    className={classes.timeLabel}
+                    style={{ top }}
+                  >
+                    {label}
+                  </div>
+                ))}
+              </div>
+
+              {/* ── Day columns ── */}
+              {DAYS.map((_, di) => (
+                <div key={di} className={classes.dayCol}>
+                  {/* Hour guide lines */}
+                  {TIME_LABELS.map(({ top }, li) => (
+                    <div
+                      key={li}
+                      className={classes.hourLine}
+                      style={{ top }}
+                    />
+                  ))}
+
+                  {/* Events — positioned by actual start/end time */}
+                  {(daySessions[di] || []).map((s: any, si: number) => {
+                    const startH = Math.max(parseTime(s.startTime), START_HOUR);
+                    const endH = s.endTime
+                      ? Math.min(parseTime(s.endTime), END_HOUR)
+                      : Math.min(startH + 1, END_HOUR);
+                    const top = (startH - START_HOUR) * PX_PER_HOUR;
+                    const height = Math.max((endH - startH) * PX_PER_HOUR, 28);
                     return (
-                      <div key={di} className={classes.dayCell}>
-                        {ev && (
-                          <div className={classes.eventBlock}>
-                            <div
-                              style={{
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {ev.courseName ||
-                                ev.moduleName ||
-                                ev.name ||
-                                ev.title ||
-                                'Class'}
-                            </div>
-                            <div
-                              style={{
-                                fontWeight: 400,
-                                color: '#8a4050',
-                                fontSize: 10,
-                              }}
-                            >
-                              {ev.room || ev.location || ev.hubName || ''}
-                            </div>
+                      <div
+                        key={si}
+                        className={classes.eventBlock}
+                        style={{ top, height }}
+                      >
+                        <div
+                          style={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {s.courseName ||
+                            s.moduleName ||
+                            s.name ||
+                            s.title ||
+                            'Class'}
+                        </div>
+                        {height >= 42 && (
+                          <div
+                            style={{
+                              fontSize: 10,
+                              opacity: 0.75,
+                              marginTop: 2,
+                            }}
+                          >
+                            {s.startTime}
+                            {s.endTime ? ` – ${s.endTime}` : ''}
                           </div>
                         )}
+                        {height >= 58 &&
+                          (s.room || s.location || s.hubName) && (
+                            <div
+                              style={{
+                                fontSize: 10,
+                                opacity: 0.65,
+                                marginTop: 1,
+                              }}
+                            >
+                              {s.room || s.location || s.hubName}
+                            </div>
+                          )}
                       </div>
                     );
                   })}
-                </React.Fragment>
+                </div>
               ))}
             </div>
           </div>

@@ -32,6 +32,7 @@ import MoreVertIcon from '@material-ui/icons/MoreVert';
 import EmojiEventsIcon from '@material-ui/icons/EmojiEvents';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import ExpandLessIcon from '@material-ui/icons/ExpandLess';
+import VideoCallIcon from '@material-ui/icons/VideoCall';
 import { useHistory, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import Layout from '../../components/layout/Layout';
@@ -578,8 +579,39 @@ const CourseList = () => {
                     </div>
                   </div>
 
-                  {/* Footer — Manage only (trainers can't add/edit courses) */}
-                  <div className={classes.cardFooter}>
+                  {/* Footer — Manage and Live Class buttons */}
+                  <div
+                    className={classes.cardFooter}
+                    style={{ display: 'flex', gap: 8, alignItems: 'center' }}
+                  >
+                    <Button
+                      size="small"
+                      disableElevation
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: BLUE,
+                        background: '#fff',
+                        border: `1px solid ${BLUE}`,
+                        borderRadius: 8,
+                        padding: '4px 12px',
+                        textTransform: 'none',
+                        boxShadow: 'none',
+                        minWidth: 'auto',
+                        flex: 1,
+                      }}
+                      startIcon={<VideoCallIcon style={{ fontSize: 14 }} />}
+                      onClick={() => {
+                        // TODO: Implement live class functionality
+                        Toast.info(
+                          `Starting live class for ${c.name || c.title}...`,
+                        );
+                        // You can add integration with Zoom, Teams, or other video platforms here
+                        window.open(`https://meet.google.com/new`, '_blank');
+                      }}
+                    >
+                      Live Class
+                    </Button>
                     <Button
                       size="small"
                       disableElevation
@@ -592,6 +624,7 @@ const CourseList = () => {
                         padding: '5px 16px',
                         textTransform: 'none',
                         boxShadow: 'none',
+                        flex: 1,
                       }}
                       onClick={() =>
                         history.push(`${localRoutes.trainerCourses}/${c.id}`)

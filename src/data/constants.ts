@@ -159,6 +159,7 @@ export const localRoutes = {
   teacherAssignmentDetails: '/admin/assignments/:assignmentId',
   timetable: '/admin/timetable',
   adminCourses: '/admin/courses',
+  adminWorkshops: '/admin/workshops',
   trainerCourses: '/trainer/courses',
   trainerStudents: '/trainer/students',
   trainerLectures: '/trainer/lectures',
@@ -302,6 +303,9 @@ export const remoteRoutes = {
   hubManagerStats: `${apiBaseUrl}/api/dashboard/hub-manager-stats`,
   courseResources: `${apiBaseUrl}/api/courses`, // append /:id/resources
   timetable: `${apiBaseUrl}/api/timetable`,
+
+  // Workshops & Podcasts
+  workshops: `${apiBaseUrl}/api/workshops`,
 
   // Course-scoped chat
   chatRooms: `${apiBaseUrl}/api/chat/rooms`,

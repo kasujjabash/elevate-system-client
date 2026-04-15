@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
@@ -38,7 +38,72 @@ import {
 import { appPermissions, localRoutes } from '../../data/constants';
 import { IState } from '../../data/types';
 import { handleLogout } from '../../data/coreActions';
+import { get } from '../../utils/ajax';
+import { remoteRoutes } from '../../data/constants';
 import elevateLogo from '../../assets/images/elevate-logo.png';
+
+// ── Shows unread chat count — updated by CourseChat via custom event ──────────
+const ChatUnreadBadge: React.FC = () => {
+  const [count, setCount] = useState<number>(() => {
+    const stored = localStorage.getItem('elevate_chat_unread');
+    return stored ? parseInt(stored, 10) || 0 : 0;
+  });
+
+  useEffect(() => {
+    // Listen for same-tab updates dispatched by CourseChat
+    const onEvent = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setCount(typeof detail === 'number' ? detail : 0);
+    };
+    window.addEventListener('chatUnreadUpdate', onEvent);
+
+    // Fallback: poll API every 60 s (handles other-tab changes too)
+    const poll = () => {
+      get(
+        remoteRoutes.chatRooms,
+        (data: any) => {
+          const rooms: any[] = Array.isArray(data) ? data : [];
+          const total = rooms.reduce((sum, r) => sum + (r.unreadCount || 0), 0);
+          localStorage.setItem('elevate_chat_unread', String(total));
+          setCount(total);
+        },
+        undefined,
+        () => {},
+      );
+    };
+    poll();
+    const t = setInterval(poll, 60_000);
+
+    return () => {
+      window.removeEventListener('chatUnreadUpdate', onEvent);
+      clearInterval(t);
+    };
+  }, []);
+
+  if (count <= 0) return null;
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#fe3a6a',
+        color: '#fff',
+        borderRadius: 10,
+        fontSize: 9,
+        fontWeight: 700,
+        minWidth: 16,
+        height: 16,
+        padding: '0 4px',
+        marginLeft: 6,
+        lineHeight: 1,
+        flexShrink: 0,
+      }}
+    >
+      {count > 99 ? '99+' : count}
+    </span>
+  );
+};
 
 interface IAppRoute {
   requiredRoles?: string[];
@@ -116,6 +181,11 @@ const staffRoutes: IAppRoute[] = [
     icon: NotificationsActiveIcon,
   },
   {
+    name: 'Workshops & Podcasts',
+    route: localRoutes.adminWorkshops,
+    icon: PlayCircleOutlineIcon,
+  },
+  {
     requiredRoles: [appPermissions.roleReportView],
     name: 'Reports',
     route: localRoutes.reports,
@@ -146,6 +216,11 @@ const hubManagerRoutes: IAppRoute[] = [
     name: 'Announcements',
     route: localRoutes.adminAnnouncements,
     icon: NotificationsActiveIcon,
+  },
+  {
+    name: 'Workshops & Podcasts',
+    route: localRoutes.adminWorkshops,
+    icon: PlayCircleOutlineIcon,
   },
   {
     name: 'Chats / Inquiries',
@@ -184,6 +259,11 @@ const trainerRoutes: IAppRoute[] = [
     name: 'Chats / Inquiries',
     route: localRoutes.chatsInquiries,
     icon: ForumIcon,
+  },
+  {
+    name: 'Workshops & Podcasts',
+    route: localRoutes.workshops,
+    icon: PlayCircleOutlineIcon,
   },
   {
     name: 'Resources',
@@ -293,6 +373,7 @@ const NavMenu = (props: any) => {
           {studentRoutes.map((it) => {
             const Icon = it.icon;
             const selected = isSelected(it.route!);
+            const isChat = it.route === localRoutes.chatsInquiries;
             return (
               <StyledListItem
                 button
@@ -308,7 +389,12 @@ const NavMenu = (props: any) => {
                   <Icon style={{ fontSize: 19 }} />
                 </ListItemIcon>
                 <ListItemText
-                  primary={it.name}
+                  primary={
+                    <span style={{ display: 'flex', alignItems: 'center' }}>
+                      {it.name}
+                      {isChat && <ChatUnreadBadge />}
+                    </span>
+                  }
                   className={selected ? classes.textSelected : classes.text}
                 />
               </StyledListItem>
@@ -364,6 +450,7 @@ const NavMenu = (props: any) => {
     routes.map((it) => {
       const Icon = it.icon;
       const selected = isSelected(it.route!);
+      const isChat = it.route === localRoutes.chatsInquiries;
       return (
         <StyledListItem
           button
@@ -379,7 +466,12 @@ const NavMenu = (props: any) => {
             <Icon style={{ fontSize: 19 }} />
           </ListItemIcon>
           <ListItemText
-            primary={it.name}
+            primary={
+              <span style={{ display: 'flex', alignItems: 'center' }}>
+                {it.name}
+                {isChat && <ChatUnreadBadge />}
+              </span>
+            }
             className={selected ? classes.textSelected : classes.text}
           />
         </StyledListItem>

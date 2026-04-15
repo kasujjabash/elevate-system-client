@@ -92,6 +92,9 @@ const CheckIn = React.lazy(() => import('./student/CheckIn'));
 const AttendanceCode = React.lazy(() => import('./student/AttendanceCode'));
 const MyRequests = React.lazy(() => import('./student/MyRequests'));
 const Workshops = React.lazy(() => import('./student/Workshops'));
+const AdminWorkshops = React.lazy(
+  () => import('./admin/workshops/AdminWorkshops'),
+);
 const MyTimetable = React.lazy(() => import('./student/MyTimetable'));
 const CourseChat = React.lazy(() => import('./chat/CourseChat'));
 const StudentCourses = React.lazy(() => import('./student/StudentCourses'));
@@ -166,6 +169,7 @@ const ContentSwitch = () => {
           <Route path={localRoutes.myAssessments} component={MyAssessments} />
           <Route path={localRoutes.myRequests} component={MyRequests} />
           <Route path={localRoutes.workshops} component={Workshops} />
+          <Route path={localRoutes.adminWorkshops} component={AdminWorkshops} />
           <Route path={localRoutes.myTimetable} component={MyTimetable} />
           <Route path={localRoutes.chatsInquiries} component={CourseChat} />
           <Route path={localRoutes.studentCourses} component={StudentCourses} />

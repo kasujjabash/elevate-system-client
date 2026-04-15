@@ -5,10 +5,7 @@ import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 import MenuBookIcon from '@material-ui/icons/MenuBook';
 import LiveTvIcon from '@material-ui/icons/LiveTv';
-import CheckCircleIcon from '@material-ui/icons/CheckCircle';
-import RadioButtonUncheckedIcon from '@material-ui/icons/RadioButtonUnchecked';
-import CloseIcon from '@material-ui/icons/Close';
-import ArrowForwardIosIcon from '@material-ui/icons/ArrowForwardIos';
+
 import {
   format,
   startOfMonth,
@@ -50,108 +47,62 @@ const useStyles = makeStyles((theme: Theme) =>
       [theme.breakpoints.down('sm')]: { width: '100%' },
     },
 
-    // ── Onboarding checklist ──────────────────────────────────────
-    checklistCard: {
-      background: '#fff',
-      borderRadius: 14,
-      border: '1px solid rgba(254,58,106,0.18)',
-      padding: '16px 20px',
-      marginBottom: 20,
-      boxShadow: '0 2px 10px rgba(254,58,106,0.06)',
-    },
-    checklistHeader: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 10,
-    },
-    checklistTitle: { fontSize: 14, fontWeight: 700, color: '#1f2025' },
-    checklistSub: { fontSize: 11, color: '#8a8f99', marginTop: 1 },
-    checklistProgressBar: {
-      height: 4,
-      borderRadius: 2,
-      background: '#f3f4f6',
-      overflow: 'hidden',
-      marginBottom: 12,
-    },
-    checklistProgressFill: {
-      height: '100%',
-      background: 'linear-gradient(90deg, #fe3a6a 0%, #fe8c45 100%)',
-      borderRadius: 2,
-      transition: 'width 0.5s ease',
-    },
-    checklistStep: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 10,
-      padding: '7px 0',
-      borderBottom: '1px solid rgba(0,0,0,0.04)',
-      cursor: 'pointer',
-      '&:last-child': { borderBottom: 'none', paddingBottom: 0 },
-      '&:hover': { opacity: 0.75 },
-    },
-    checklistStepDone: {
-      opacity: 0.5,
-      cursor: 'default',
-      '&:hover': { opacity: 0.5 },
-    },
-    checklistStepLabel: {
-      fontSize: 13,
-      fontWeight: 500,
-      flex: 1,
-      color: '#1f2025',
-    },
-    checklistStepLabelDone: {
-      textDecoration: 'line-through',
-      color: '#8a8f99',
-    },
-    checklistDismiss: { padding: 4, color: '#c4c8d0' },
-
     // ── Reminders banner ──────────────────────────────────────────
+    '@keyframes announceFade': {
+      '0%': { opacity: 0, transform: 'translateY(10px)' },
+      '100%': { opacity: 1, transform: 'translateY(0)' },
+    },
     reminderBanner: {
       borderRadius: 14,
       background: 'linear-gradient(120deg, #fe3a6a 0%, #fe6a45 100%)',
-      padding: '20px 24px',
+      padding: '24px 28px',
       marginBottom: 24,
       position: 'relative' as any,
       overflow: 'hidden',
       color: '#fff',
-      minHeight: 100,
+      minHeight: 120,
       [theme.breakpoints.down('xs')]: {
-        padding: '16px 18px',
+        padding: '18px 18px',
         minHeight: 'auto',
       },
     },
+    bannerContent: {
+      animation: '$announceFade 0.45s ease',
+    },
     reminderTitle: {
-      fontWeight: 700,
-      fontSize: 16,
+      fontWeight: 800,
+      fontSize: 22,
       color: '#fff',
-      marginBottom: 6,
-      [theme.breakpoints.down('xs')]: { fontSize: 14 },
+      marginBottom: 8,
+      lineHeight: 1.2,
+      [theme.breakpoints.down('xs')]: { fontSize: 18 },
     },
     reminderText: {
       fontSize: 13,
-      color: 'rgba(255,255,255,0.85)',
-      lineHeight: 1.5,
+      color: 'rgba(255,255,255,0.88)',
+      lineHeight: 1.6,
       maxWidth: '75%',
       [theme.breakpoints.down('xs')]: { maxWidth: '90%', fontSize: 12 },
     },
     reminderDots: {
       display: 'flex',
       gap: 5,
-      marginTop: 14,
+      marginTop: 16,
     },
     dot: {
       width: 6,
       height: 6,
       borderRadius: '50%',
       background: 'rgba(255,255,255,0.4)',
+      transition: 'all 0.3s ease',
+      cursor: 'pointer',
     },
     dotActive: {
-      width: 18,
+      width: 20,
       height: 6,
       borderRadius: 3,
       background: '#fff',
+      transition: 'all 0.3s ease',
     },
     bannerDecor: {
       position: 'absolute' as any,
@@ -379,17 +330,6 @@ const StudentDashboard = () => {
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
 
-  // Onboarding checklist — persisted per user via localStorage
-  const uid = user?.id || user?.contactId || '';
-  const [checklistDismissed, setChecklistDismissed] = useState(
-    () => !!localStorage.getItem(`elevate_onboarding_done_${uid}`),
-  );
-  const [profileVisited, setProfileVisited] = useState(
-    () => !!localStorage.getItem(`elevate_profile_visited_${uid}`),
-  );
-  const [timetableVisited, setTimetableVisited] = useState(
-    () => !!localStorage.getItem(`elevate_timetable_visited_${uid}`),
-  );
   const [attendanceDays, setAttendanceDays] = useState<number[]>([
     0, 0, 0, 0, 0, 0, 0,
   ]);
@@ -405,24 +345,37 @@ const StudentDashboard = () => {
       if (done >= 1) setLoading(false);
     };
 
+    // Fetch enrolled courses then load timetable filtered by those courseIds
     get(
       remoteRoutes.myCourses,
-      (data) => setEnrollments(Array.isArray(data) ? data : []),
+      (data: any) => {
+        const list = Array.isArray(data) ? data : [];
+        setEnrollments(list);
+        const courseIds = new Set(
+          list.map((c: any) => String(c.id || c.courseId)).filter(Boolean),
+        );
+        get(
+          remoteRoutes.timetable,
+          (tdata: any) => {
+            const all: any[] = Array.isArray(tdata)
+              ? tdata
+              : tdata?.sessions || tdata?.data || [];
+            const filtered =
+              courseIds.size > 0
+                ? all.filter((s: any) => {
+                    const cid = String(s.courseId ?? s.course?.id ?? '');
+                    return cid && courseIds.has(cid);
+                  })
+                : all;
+            setSessions(filtered);
+          },
+          undefined,
+          undefined,
+        );
+      },
       undefined,
       finish,
     );
-
-    // Timetable sessions — use contactId or id as fallback
-    const studentId = user?.contactId || user?.id;
-    if (studentId) {
-      get(
-        `${remoteRoutes.timetable}?contactId=${studentId}&studentId=${studentId}`,
-        (data: any) =>
-          setSessions(Array.isArray(data) ? data : data?.sessions || []),
-        undefined,
-        undefined,
-      );
-    }
 
     // Announcements
     get(
@@ -542,7 +495,7 @@ const StudentDashboard = () => {
             <div className={classes.bannerDecor} />
             <div className={classes.bannerDecor2} />
             {announcements.length > 0 ? (
-              <>
+              <div key={announcementIdx} className={classes.bannerContent}>
                 <Typography className={classes.reminderTitle}>
                   {announcements[announcementIdx]?.title || 'Announcement'}
                 </Typography>
@@ -562,15 +515,14 @@ const StudentDashboard = () => {
                             ? classes.dotActive
                             : classes.dot
                         }
-                        style={{ cursor: 'pointer' }}
                         onClick={() => setAnnouncementIdx(i)}
                       />
                     ))}
                   </div>
                 )}
-              </>
+              </div>
             ) : (
-              <>
+              <div className={classes.bannerContent}>
                 <Typography className={classes.reminderTitle}>
                   Class &amp; Assessment Reminders
                 </Typography>
@@ -583,138 +535,9 @@ const StudentDashboard = () => {
                   <div className={classes.dot} />
                   <div className={classes.dot} />
                 </div>
-              </>
+              </div>
             )}
           </div>
-
-          {/* ── Onboarding checklist ──────────────────────────────── */}
-          {!checklistDismissed &&
-            (() => {
-              const attendanceDone = attendanceDays.some((d) => d > 0);
-              const steps = [
-                {
-                  key: 'account',
-                  label: 'Create your account',
-                  done: true,
-                  route: null,
-                },
-                {
-                  key: 'profile',
-                  label: 'Complete your profile',
-                  done: profileVisited,
-                  route: localRoutes.myProfile,
-                },
-                {
-                  key: 'enroll',
-                  label: 'Enroll in a course',
-                  done: enrollments.length > 0,
-                  route: localRoutes.catalog,
-                },
-                {
-                  key: 'timetable',
-                  label: 'View your timetable',
-                  done: timetableVisited,
-                  route: localRoutes.myTimetable,
-                },
-                {
-                  key: 'attend',
-                  label: 'Attend your first class',
-                  done: attendanceDone,
-                  route: null,
-                },
-              ];
-              const doneCount = steps.filter((s) => s.done).length;
-              const allDone = doneCount === steps.length;
-
-              const handleStep = (step: (typeof steps)[0]) => {
-                if (step.done || !step.route) return;
-                if (step.key === 'profile') {
-                  localStorage.setItem(`elevate_profile_visited_${uid}`, '1');
-                  setProfileVisited(true);
-                }
-                if (step.key === 'timetable') {
-                  localStorage.setItem(`elevate_timetable_visited_${uid}`, '1');
-                  setTimetableVisited(true);
-                }
-                history.push(step.route);
-              };
-
-              const handleDismiss = () => {
-                localStorage.setItem(`elevate_onboarding_done_${uid}`, '1');
-                setChecklistDismissed(true);
-              };
-
-              return (
-                <div className={classes.checklistCard}>
-                  <div className={classes.checklistHeader}>
-                    <div>
-                      <div className={classes.checklistTitle}>
-                        {allDone ? "🎉 You're all set!" : 'Getting Started'}
-                      </div>
-                      <div className={classes.checklistSub}>
-                        {doneCount} of {steps.length} steps complete
-                      </div>
-                    </div>
-                    <IconButton
-                      size="small"
-                      className={classes.checklistDismiss}
-                      onClick={handleDismiss}
-                    >
-                      <CloseIcon style={{ fontSize: 16 }} />
-                    </IconButton>
-                  </div>
-
-                  {/* Progress bar */}
-                  <div className={classes.checklistProgressBar}>
-                    <div
-                      className={classes.checklistProgressFill}
-                      style={{ width: `${(doneCount / steps.length) * 100}%` }}
-                    />
-                  </div>
-
-                  {/* Steps */}
-                  {steps.map((step) => (
-                    <div
-                      key={step.key}
-                      className={`${classes.checklistStep} ${
-                        step.done ? classes.checklistStepDone : ''
-                      }`}
-                      onClick={() => handleStep(step)}
-                    >
-                      {step.done ? (
-                        <CheckCircleIcon
-                          style={{
-                            fontSize: 20,
-                            color: '#10b981',
-                            flexShrink: 0,
-                          }}
-                        />
-                      ) : (
-                        <RadioButtonUncheckedIcon
-                          style={{
-                            fontSize: 20,
-                            color: '#d1d5db',
-                            flexShrink: 0,
-                          }}
-                        />
-                      )}
-                      <span
-                        className={`${classes.checklistStepLabel} ${
-                          step.done ? classes.checklistStepLabelDone : ''
-                        }`}
-                      >
-                        {step.label}
-                      </span>
-                      {!step.done && step.route && (
-                        <ArrowForwardIosIcon
-                          style={{ fontSize: 11, color: '#c4c8d0' }}
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
 
           {/* My Courses */}
           <Typography className={classes.sectionTitle}>My Courses</Typography>

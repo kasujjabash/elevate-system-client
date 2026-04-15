@@ -16,6 +16,8 @@ import AddIcon from '@material-ui/icons/Add';
 import CloseIcon from '@material-ui/icons/Close';
 import SearchIcon from '@material-ui/icons/Search';
 import ForumIcon from '@material-ui/icons/Forum';
+import GroupIcon from '@material-ui/icons/Group';
+import PersonIcon from '@material-ui/icons/Person';
 import ArrowBackIcon from '@material-ui/icons/ArrowBack';
 import { makeStyles, Theme } from '@material-ui/core/styles';
 import { format } from 'date-fns';
@@ -33,6 +35,8 @@ const BLUE = '#3b82f6';
 const AMBER = '#f59e0b';
 const PURPLE = '#8b5cf6';
 const AVATAR_COLORS = [PURPLE, BLUE, GREEN, AMBER, CORAL, '#06b6d4'];
+
+const POLL_INTERVAL = 15_000; // 15 s
 
 const useStyles = makeStyles((theme: Theme) => ({
   root: {
@@ -95,6 +99,17 @@ const useStyles = makeStyles((theme: Theme) => ({
   },
   conversationList: { flex: 1, overflowY: 'auto' as any },
 
+  sectionHeading: {
+    padding: '8px 16px 4px',
+    fontSize: 10,
+    fontWeight: 700,
+    color: '#9ca3af',
+    letterSpacing: '0.07em',
+    textTransform: 'uppercase' as any,
+    borderBottom: '1px solid rgba(0,0,0,0.04)',
+    background: '#fafafa',
+  },
+
   conversation: {
     display: 'flex',
     alignItems: 'center',
@@ -121,6 +136,18 @@ const useStyles = makeStyles((theme: Theme) => ({
     fontWeight: 700,
     color: '#fff',
     flexShrink: 0,
+    position: 'relative',
+  },
+  groupAvatarBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    background:
+      'linear-gradient(135deg, rgba(254,58,106,0.15) 0%, rgba(254,140,69,0.15) 100%)',
   },
   convName: { fontSize: 13, fontWeight: 600, color: DARK, marginBottom: 2 },
   convSnippet: {
@@ -147,6 +174,13 @@ const useStyles = makeStyles((theme: Theme) => ({
     background: 'rgba(254,58,106,0.08)',
     color: CORAL,
     padding: '1px 5px',
+  },
+  memberCount: {
+    fontSize: 10,
+    color: '#9ca3af',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 2,
   },
   unreadDot: {
     width: 8,
@@ -180,12 +214,22 @@ const useStyles = makeStyles((theme: Theme) => ({
     flexDirection: 'column' as any,
     gap: 12,
   },
-  dayLabel: {
-    textAlign: 'center' as any,
-    fontSize: 11,
-    color: '#9ca3af',
-    fontWeight: 600,
-    margin: '6px 0',
+  messagePair: {
+    display: 'flex',
+    flexDirection: 'column' as any,
+  },
+  senderLabel: {
+    fontSize: 10,
+    fontWeight: 700,
+    color: '#8a8f99',
+    marginBottom: 3,
+    paddingLeft: 4,
+  },
+  senderLabelMine: {
+    textAlign: 'right' as any,
+    paddingRight: 4,
+    paddingLeft: 0,
+    color: CORAL,
   },
   bubble: {
     maxWidth: '68%',
@@ -206,13 +250,6 @@ const useStyles = makeStyles((theme: Theme) => ({
     color: DARK,
     borderBottomLeftRadius: 3,
   },
-  bubbleSenderName: {
-    fontSize: 10,
-    fontWeight: 700,
-    marginBottom: 3,
-    color: 'rgba(255,255,255,0.75)',
-  },
-  bubbleSenderNameTheirs: { color: '#8a8f99' },
   bubbleMeta: {
     fontSize: 10,
     opacity: 0.65,
@@ -303,12 +340,21 @@ const fmtFull = (iso: string) => {
   }
 };
 
+const avatarColor = (name: string) =>
+  AVATAR_COLORS[(name.charCodeAt(0) || 0) % AVATAR_COLORS.length];
+
+// Is this a group/course room?
+const isGroupRoom = (room: any) =>
+  room.type === 'group' || !!room.courseId || !!room.courseName;
+
 // ── Main component ─────────────────────────────────────────────────────────────
 const CourseChat = () => {
   const classes = useStyles();
   const user = useSelector((state: IState) => state.core.user);
-  const myId = user?.id || user?.contactId;
+  const myId = String(user?.id || user?.contactId || '');
+  const myName = user?.fullName || 'Me';
   const bottomRef = useRef<HTMLDivElement>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [rooms, setRooms] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
@@ -321,13 +367,25 @@ const CourseChat = () => {
   const [showNewChat, setShowNewChat] = useState(false);
   const [contactQuery, setContactQuery] = useState('');
   const [creatingRoom, setCreatingRoom] = useState(false);
+  const [search, setSearch] = useState('');
+
+  // Broadcast unread count to NavMenu (same-tab custom event + localStorage)
+  const broadcastUnread = (roomList: any[]) => {
+    const total = roomList.reduce((sum, r) => sum + (r.unreadCount || 0), 0);
+    localStorage.setItem('elevate_chat_unread', String(total));
+    window.dispatchEvent(
+      new CustomEvent('chatUnreadUpdate', { detail: total }),
+    );
+  };
 
   // Load rooms + contacts on mount
   useEffect(() => {
     get(
       remoteRoutes.chatRooms,
       (data: any) => {
-        setRooms(Array.isArray(data) ? data : []);
+        const list = Array.isArray(data) ? data : [];
+        setRooms(list);
+        broadcastUnread(list);
         setLoadingRooms(false);
       },
       undefined,
@@ -344,26 +402,40 @@ const CourseChat = () => {
     );
   }, []);
 
-  // Load messages when room changes
+  // Fetch messages & poll when active room changes
   useEffect(() => {
+    if (pollRef.current) clearInterval(pollRef.current);
     if (!activeRoom) return;
-    setLoadingMsgs(true);
-    setMessages([]);
-    get(
-      `${remoteRoutes.chatRooms}/${activeRoom.id}/messages`,
-      (data: any) => {
-        setMessages(Array.isArray(data) ? data : []);
-        setLoadingMsgs(false);
-      },
-      undefined,
-      () => setLoadingMsgs(false),
-    );
+
+    const fetchMsgs = (initial: boolean = false) => {
+      if (initial) {
+        setLoadingMsgs(true);
+        setMessages([]);
+      }
+      get(
+        `${remoteRoutes.chatRooms}/${activeRoom.id}/messages`,
+        (data: any) => {
+          setMessages(Array.isArray(data) ? data : []);
+          if (initial) setLoadingMsgs(false);
+        },
+        undefined,
+        () => {
+          if (initial) setLoadingMsgs(false);
+        },
+      );
+    };
+
+    fetchMsgs(true);
+    pollRef.current = setInterval(() => fetchMsgs(false), POLL_INTERVAL);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, [activeRoom?.id]);
 
   // Scroll to bottom when messages load
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages.length]);
 
   const handleSend = () => {
     if (!text.trim() || !activeRoom) return;
@@ -372,7 +444,7 @@ const CourseChat = () => {
       id: `tmp_${Date.now()}`,
       content: text,
       senderId: myId,
-      senderName: user?.fullName || 'Me',
+      senderName: myName,
       createdAt: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, optimistic]);
@@ -386,7 +458,6 @@ const CourseChat = () => {
         setMessages((prev) =>
           prev.map((m) => (m.id === optimistic.id ? saved || optimistic : m)),
         );
-        // update room snippet
         setRooms((prev) =>
           prev.map((r) =>
             r.id === activeRoom.id
@@ -404,11 +475,13 @@ const CourseChat = () => {
     );
   };
 
-  const handleStartChat = (contact: any) => {
+  // Start a 1:1 direct message with a contact
+  const handleStartDirect = (contact: any) => {
     setCreatingRoom(true);
     post(
       remoteRoutes.chatRooms,
       {
+        type: 'direct',
         participantId: contact.id || contact.contactId,
         courseId: contact.courseId,
       },
@@ -416,7 +489,33 @@ const CourseChat = () => {
         setCreatingRoom(false);
         setShowNewChat(false);
         setContactQuery('');
-        // add room if not already in list
+        setRooms((prev) => {
+          const exists = prev.find((r) => r.id === room.id);
+          return exists ? prev : [room, ...prev];
+        });
+        setActiveRoom(room);
+      },
+      undefined,
+      () => setCreatingRoom(false),
+    );
+  };
+
+  // Get or create a course group room
+  const handleOpenCourseRoom = (courseId: string, courseName: string) => {
+    // Check if room already loaded
+    const existing = rooms.find(
+      (r) => isGroupRoom(r) && String(r.courseId) === String(courseId),
+    );
+    if (existing) {
+      setActiveRoom(existing);
+      return;
+    }
+    setCreatingRoom(true);
+    post(
+      remoteRoutes.chatRooms,
+      { type: 'group', courseId, title: courseName },
+      (room: any) => {
+        setCreatingRoom(false);
         setRooms((prev) => {
           const exists = prev.find((r) => r.id === room.id);
           return exists ? prev : [room, ...prev];
@@ -435,12 +534,70 @@ const CourseChat = () => {
       .includes(contactQuery.toLowerCase());
   });
 
+  const courseRooms = rooms.filter(isGroupRoom);
+  const directRooms = rooms.filter((r) => !isGroupRoom(r));
+
+  const filterRoom = (r: any) => {
+    if (!search) return true;
+    const name = r.title || r.courseName || '';
+    return name.toLowerCase().includes(search.toLowerCase());
+  };
+
   const otherParticipant = (room: any) => {
     const parts: any[] = room.participants || [];
-    return (
-      parts.find((p) => String(p.id || p.contactId) !== String(myId)) ||
+
+    // Find the participant that isn't the current user
+    const other =
+      parts.find(
+        (p: any) => String(p.id || p.contactId || p.userId) !== myId,
+      ) ||
       parts[0] ||
-      {}
+      {};
+
+    // The API often returns participants with just { id } — cross-reference
+    // the contacts list we already loaded for the full name
+    const otherId = String(other.id || other.contactId || other.userId || '');
+    const fromContacts = otherId
+      ? contacts.find(
+          (c: any) =>
+            String(c.id || c.contactId) === otherId ||
+            String(c.userId) === otherId,
+        )
+      : null;
+
+    // Also check room-level fields some backends put on direct rooms
+    const roomLevel = room.otherUser || room.recipient || room.peer || {};
+
+    // Merge: contacts data has the richest name info
+    const merged: any = { ...roomLevel, ...other, ...(fromContacts || {}) };
+
+    const name =
+      merged.fullName ||
+      merged.name ||
+      merged.displayName ||
+      (merged.firstName && merged.lastName
+        ? `${merged.firstName} ${merged.lastName}`.trim()
+        : null) ||
+      merged.firstName ||
+      merged.lastName ||
+      merged.username ||
+      (merged.email ? merged.email.split('@')[0] : null) ||
+      room.title ||
+      null;
+
+    return { ...merged, displayName: name };
+  };
+
+  const roomDisplayName = (room: any) => {
+    if (isGroupRoom(room))
+      return room.title || room.courseName || 'Course Chat';
+    const other = otherParticipant(room);
+    return (
+      other.displayName ||
+      other.fullName ||
+      other.name ||
+      room.title ||
+      'Direct Message'
     );
   };
 
@@ -457,7 +614,7 @@ const CourseChat = () => {
             disableElevation
             onClick={() => setShowNewChat(true)}
           >
-            New Message
+            Direct Message
           </Button>
         </div>
 
@@ -472,6 +629,8 @@ const CourseChat = () => {
                 <InputBase
                   placeholder="Search conversations…"
                   style={{ fontSize: 12, flex: 1 }}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
             </div>
@@ -481,73 +640,235 @@ const CourseChat = () => {
                 <div style={{ padding: 24, textAlign: 'center' }}>
                   <CircularProgress size={22} style={{ color: CORAL }} />
                 </div>
-              ) : rooms.length === 0 ? (
-                <div
-                  style={{
-                    padding: '32px 16px',
-                    textAlign: 'center',
-                    color: '#b0b5bf',
-                  }}
-                >
-                  <ForumIcon
-                    style={{
-                      fontSize: 36,
-                      color: '#e0e0e0',
-                      display: 'block',
-                      margin: '0 auto 8px',
-                    }}
-                  />
-                  <Typography style={{ fontSize: 12 }}>
-                    No conversations yet
-                  </Typography>
-                  <Typography style={{ fontSize: 11, marginTop: 4 }}>
-                    Click "New Message" to start one
-                  </Typography>
-                </div>
               ) : (
-                rooms.map((room) => {
-                  const other = otherParticipant(room);
-                  const name =
-                    other.fullName || other.name || room.title || 'Chat';
-                  const colorIdx =
-                    (name.charCodeAt(0) || 0) % AVATAR_COLORS.length;
-                  const isActive = activeRoom?.id === room.id;
-                  return (
+                <>
+                  {/* ── Course / Group rooms ── */}
+                  {courseRooms.filter(filterRoom).length > 0 && (
+                    <>
+                      <div className={classes.sectionHeading}>Course Chats</div>
+                      {courseRooms.filter(filterRoom).map((room) => {
+                        const name =
+                          room.title || room.courseName || 'Course Chat';
+                        const memberCount =
+                          room.participants?.length || room.memberCount || 0;
+                        const isActive = activeRoom?.id === room.id;
+                        const unread = room.unreadCount || 0;
+                        const snippet = (() => {
+                          if (!room.lastMessage)
+                            return 'Start the conversation';
+                          if (typeof room.lastMessage === 'object') {
+                            return (
+                              room.lastMessage.content ||
+                              room.lastMessage.body ||
+                              'New message'
+                            );
+                          }
+                          return String(room.lastMessage);
+                        })();
+                        return (
+                          <div
+                            key={room.id}
+                            className={`${classes.conversation} ${
+                              isActive ? classes.conversationActive : ''
+                            }`}
+                            onClick={() => setActiveRoom(room)}
+                          >
+                            <div
+                              style={{ position: 'relative', flexShrink: 0 }}
+                            >
+                              <div className={classes.groupAvatarBox}>
+                                <GroupIcon
+                                  style={{ fontSize: 20, color: CORAL }}
+                                />
+                              </div>
+                              {unread > 0 && (
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    top: -3,
+                                    right: -3,
+                                    background: CORAL,
+                                    color: '#fff',
+                                    borderRadius: 10,
+                                    fontSize: 9,
+                                    fontWeight: 700,
+                                    minWidth: 16,
+                                    height: 16,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '0 3px',
+                                    border: '2px solid #fff',
+                                  }}
+                                >
+                                  {unread > 99 ? '99+' : unread}
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div className={classes.convName}>{name}</div>
+                              <div className={classes.convSnippet}>
+                                {snippet}
+                              </div>
+                            </div>
+                            <div className={classes.convMeta}>
+                              <span className={classes.convTime}>
+                                {fmtTime(room.lastMessageAt || room.createdAt)}
+                              </span>
+                              {memberCount > 0 && (
+                                <span className={classes.memberCount}>
+                                  <PersonIcon style={{ fontSize: 10 }} />
+                                  {memberCount}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {/* ── Direct rooms ── */}
+                  {directRooms.filter(filterRoom).length > 0 && (
+                    <>
+                      <div className={classes.sectionHeading}>
+                        {directRooms.filter(filterRoom).length === 1
+                          ? (() => {
+                              const room = directRooms.filter(filterRoom)[0];
+                              const other = otherParticipant(room);
+                              return (
+                                other.displayName ||
+                                other.fullName ||
+                                other.name ||
+                                other.firstName ||
+                                'Direct Message'
+                              );
+                            })()
+                          : 'Direct Messages'}
+                      </div>
+                      {directRooms.filter(filterRoom).map((room) => {
+                        const other = otherParticipant(room);
+                        // Resolve best available name — never show raw fallback text
+                        const name =
+                          other.displayName ||
+                          other.fullName ||
+                          other.name ||
+                          (other.firstName && other.lastName
+                            ? `${other.firstName} ${other.lastName}`.trim()
+                            : null) ||
+                          other.firstName ||
+                          other.lastName ||
+                          other.username ||
+                          (other.email ? other.email.split('@')[0] : null) ||
+                          room.title ||
+                          null;
+                        const displayName = name || 'Loading…';
+                        const isActive = activeRoom?.id === room.id;
+                        const unread = room.unreadCount || 0;
+                        const snippet = (() => {
+                          if (!room.lastMessage)
+                            return 'Start the conversation';
+                          if (typeof room.lastMessage === 'object') {
+                            const c =
+                              room.lastMessage.content ||
+                              room.lastMessage.body ||
+                              room.lastMessage.text ||
+                              '';
+                            return c || 'New message';
+                          }
+                          return String(room.lastMessage);
+                        })();
+                        return (
+                          <div
+                            key={room.id}
+                            className={`${classes.conversation} ${
+                              isActive ? classes.conversationActive : ''
+                            }`}
+                            onClick={() => setActiveRoom(room)}
+                          >
+                            <div
+                              className={classes.convAvatar}
+                              style={{
+                                background: name
+                                  ? avatarColor(name)
+                                  : '#c4c8d0',
+                              }}
+                            >
+                              {name ? initials(name) : '?'}
+                              {unread > 0 && (
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    top: -3,
+                                    right: -3,
+                                    background: CORAL,
+                                    color: '#fff',
+                                    borderRadius: 10,
+                                    fontSize: 9,
+                                    fontWeight: 700,
+                                    minWidth: 16,
+                                    height: 16,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '0 3px',
+                                    border: '2px solid #fff',
+                                  }}
+                                >
+                                  {unread > 99 ? '99+' : unread}
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div className={classes.convName}>
+                                {displayName}
+                              </div>
+                              <div className={classes.convSnippet}>
+                                {snippet}
+                              </div>
+                            </div>
+                            <div className={classes.convMeta}>
+                              <span className={classes.convTime}>
+                                {fmtTime(room.lastMessageAt || room.createdAt)}
+                              </span>
+                              {room.courseName && (
+                                <span className={classes.courseBadge}>
+                                  {room.courseName}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {/* Empty state */}
+                  {courseRooms.length === 0 && directRooms.length === 0 && (
                     <div
-                      key={room.id}
-                      className={`${classes.conversation} ${
-                        isActive ? classes.conversationActive : ''
-                      }`}
-                      onClick={() => setActiveRoom(room)}
+                      style={{
+                        padding: '32px 16px',
+                        textAlign: 'center',
+                        color: '#b0b5bf',
+                      }}
                     >
-                      <div
-                        className={classes.convAvatar}
-                        style={{ background: AVATAR_COLORS[colorIdx] }}
-                      >
-                        {initials(name)}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className={classes.convName}>{name}</div>
-                        <div className={classes.convSnippet}>
-                          {room.lastMessage || 'Start the conversation'}
-                        </div>
-                      </div>
-                      <div className={classes.convMeta}>
-                        <span className={classes.convTime}>
-                          {fmtTime(room.lastMessageAt || room.createdAt)}
-                        </span>
-                        {room.courseName && (
-                          <span className={classes.courseBadge}>
-                            {room.courseName}
-                          </span>
-                        )}
-                        {room.unreadCount > 0 && (
-                          <div className={classes.unreadDot} />
-                        )}
-                      </div>
+                      <ForumIcon
+                        style={{
+                          fontSize: 36,
+                          color: '#e0e0e0',
+                          display: 'block',
+                          margin: '0 auto 8px',
+                        }}
+                      />
+                      <Typography style={{ fontSize: 12 }}>
+                        No conversations yet
+                      </Typography>
+                      <Typography style={{ fontSize: 11, marginTop: 4 }}>
+                        Click "Direct Message" to start chatting
+                      </Typography>
                     </div>
-                  );
-                })
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -572,8 +893,8 @@ const CourseChat = () => {
                     maxWidth: 280,
                   }}
                 >
-                  Choose a conversation from the left, or start a new one with a
-                  classmate or your trainer.
+                  Choose a conversation from the left, or start a new direct
+                  message with a classmate or your trainer.
                 </Typography>
                 <Button
                   variant="contained"
@@ -583,7 +904,7 @@ const CourseChat = () => {
                   style={{ marginTop: 20 }}
                   onClick={() => setShowNewChat(true)}
                 >
-                  New Message
+                  Direct Message
                 </Button>
               </div>
             ) : (
@@ -597,45 +918,78 @@ const CourseChat = () => {
                   >
                     <ArrowBackIcon fontSize="small" />
                   </IconButton>
-                  {(() => {
-                    const other = otherParticipant(activeRoom);
-                    const name =
-                      other.fullName ||
-                      other.name ||
-                      activeRoom.title ||
-                      'Chat';
-                    const colorIdx =
-                      (name.charCodeAt(0) || 0) % AVATAR_COLORS.length;
-                    return (
-                      <>
-                        <div
-                          style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: '50%',
-                            background: AVATAR_COLORS[colorIdx],
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: '#fff',
-                            flexShrink: 0,
-                          }}
-                        >
-                          {initials(name)}
+
+                  {isGroupRoom(activeRoom) ? (
+                    <>
+                      <div
+                        className={classes.groupAvatarBox}
+                        style={{ width: 36, height: 36 }}
+                      >
+                        <GroupIcon style={{ fontSize: 18, color: CORAL }} />
+                      </div>
+                      <div>
+                        <div className={classes.chatHeaderName}>
+                          {activeRoom.title ||
+                            activeRoom.courseName ||
+                            'Course Chat'}
                         </div>
-                        <div>
-                          <div className={classes.chatHeaderName}>{name}</div>
-                          {activeRoom.courseName && (
-                            <div className={classes.chatHeaderMeta}>
-                              {activeRoom.courseName}
-                            </div>
-                          )}
+                        <div className={classes.chatHeaderMeta}>
+                          {activeRoom.participants?.length > 0
+                            ? `${activeRoom.participants.length} members`
+                            : 'Group chat'}
                         </div>
-                      </>
-                    );
-                  })()}
+                      </div>
+                    </>
+                  ) : (
+                    (() => {
+                      const other = otherParticipant(activeRoom);
+                      const name =
+                        other.displayName ||
+                        other.fullName ||
+                        other.name ||
+                        other.firstName ||
+                        `${other.firstName || ''} ${
+                          other.lastName || ''
+                        }`.trim() ||
+                        other.username ||
+                        other.email?.split('@')[0] ||
+                        activeRoom.title ||
+                        'Chat';
+                      return (
+                        <>
+                          <div
+                            style={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: '50%',
+                              background: avatarColor(name),
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: 13,
+                              fontWeight: 700,
+                              color: '#fff',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {initials(name)}
+                          </div>
+                          <div>
+                            <div className={classes.chatHeaderName}>{name}</div>
+                            {(other.role || activeRoom.courseName) && (
+                              <div className={classes.chatHeaderMeta}>
+                                {other.role}
+                                {other.role && activeRoom.courseName
+                                  ? ' · '
+                                  : ''}
+                                {activeRoom.courseName}
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      );
+                    })()
+                  )}
                 </div>
 
                 {/* Messages */}
@@ -657,30 +1011,84 @@ const CourseChat = () => {
                       </Typography>
                     </div>
                   ) : (
-                    messages.map((msg) => {
+                    messages.map((msg, index) => {
                       const isMine =
-                        String(msg.senderId || msg.sender?.id) === String(myId);
+                        String(msg.senderId || msg.sender?.id) === myId;
+                      const sender = isMine
+                        ? null
+                        : msg.sender ||
+                          activeRoom?.participants?.find(
+                            (p: any) =>
+                              String(p.id || p.contactId || p.userId) ===
+                              String(msg.senderId || msg.sender?.id),
+                          );
+
+                      // Enhanced sender name extraction
+                      let senderName = isMine ? 'You' : 'Unknown';
+                      if (!isMine && sender) {
+                        senderName =
+                          sender.displayName ||
+                          sender.fullName ||
+                          sender.name ||
+                          (sender.firstName && sender.lastName
+                            ? `${sender.firstName} ${sender.lastName}`.trim()
+                            : '') ||
+                          sender.firstName ||
+                          sender.lastName ||
+                          sender.username ||
+                          sender.email?.split('@')[0] ||
+                          msg.senderName ||
+                          'Unknown';
+                      } else if (!isMine) {
+                        senderName =
+                          msg.senderName ||
+                          msg.sender?.fullName ||
+                          msg.sender?.name ||
+                          'Unknown';
+                      }
+
+                      // Count messages from this sender
+                      const messagesFromSender = messages.filter(
+                        (m) =>
+                          String(m.senderId || m.sender?.id) ===
+                          String(msg.senderId || msg.sender?.id),
+                      ).length;
+
                       return (
-                        <div
-                          key={msg.id}
-                          className={`${classes.bubble} ${
-                            isMine ? classes.bubbleMine : classes.bubbleTheirs
-                          }`}
-                        >
-                          {!isMine && (
-                            <div
-                              className={`${classes.bubbleSenderName} ${classes.bubbleSenderNameTheirs}`}
-                            >
-                              {msg.senderName || msg.sender?.fullName || 'User'}
-                            </div>
-                          )}
-                          {msg.content || msg.body}
+                        <div key={msg.id} className={classes.messagePair}>
                           <div
-                            className={`${classes.bubbleMeta} ${
-                              !isMine ? classes.bubbleMetaTheirs : ''
+                            className={`${classes.senderLabel} ${
+                              isMine ? classes.senderLabelMine : ''
                             }`}
                           >
-                            {fmtFull(msg.createdAt)}
+                            {senderName}
+                            {!isMine && messagesFromSender > 1 && (
+                              <span
+                                style={{
+                                  fontSize: 8,
+                                  marginLeft: 4,
+                                  opacity: 0.7,
+                                }}
+                              >
+                                ({messagesFromSender})
+                              </span>
+                            )}
+                          </div>
+                          <div
+                            className={`${classes.bubble} ${
+                              isMine ? classes.bubbleMine : classes.bubbleTheirs
+                            }`}
+                          >
+                            {typeof (msg.content || msg.body) === 'object'
+                              ? JSON.stringify(msg.content || msg.body)
+                              : msg.content || msg.body}
+                            <div
+                              className={`${classes.bubbleMeta} ${
+                                !isMine ? classes.bubbleMetaTheirs : ''
+                              }`}
+                            >
+                              {fmtFull(msg.createdAt)}
+                            </div>
                           </div>
                         </div>
                       );
@@ -698,7 +1106,7 @@ const CourseChat = () => {
                     placeholder="Type a message…"
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    onKeyPress={(e) => {
+                    onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         handleSend();
@@ -723,7 +1131,7 @@ const CourseChat = () => {
           </div>
         </div>
 
-        {/* ── New message dialog ─────────────────────────────────────────── */}
+        {/* ── New direct message dialog ─────────────────────────────────── */}
         <Dialog
           open={showNewChat}
           onClose={() => {
@@ -740,7 +1148,9 @@ const CourseChat = () => {
               alignItems: 'center',
             }}
           >
-            <span style={{ fontWeight: 700, fontSize: 15 }}>New Message</span>
+            <span style={{ fontWeight: 700, fontSize: 15 }}>
+              New Direct Message
+            </span>
             <IconButton
               size="small"
               onClick={() => {
@@ -753,6 +1163,12 @@ const CourseChat = () => {
           </DialogTitle>
           <Divider />
           <DialogContent style={{ paddingTop: 14, paddingBottom: 16 }}>
+            <Typography
+              style={{ fontSize: 12, color: '#8a8f99', marginBottom: 12 }}
+            >
+              You can message classmates enrolled in the same course, your
+              trainer, and your hub manager.
+            </Typography>
             <div
               style={{
                 marginBottom: 14,
@@ -799,13 +1215,11 @@ const CourseChat = () => {
             ) : (
               filteredContacts.map((c, i) => {
                 const name = c.fullName || c.name || 'User';
-                const colorIdx =
-                  (name.charCodeAt(0) || 0) % AVATAR_COLORS.length;
                 return (
                   <div
                     key={c.id || c.contactId || i}
                     className={classes.contactRow}
-                    onClick={() => !creatingRoom && handleStartChat(c)}
+                    onClick={() => !creatingRoom && handleStartDirect(c)}
                     style={{ opacity: creatingRoom ? 0.6 : 1 }}
                   >
                     <div
@@ -813,7 +1227,7 @@ const CourseChat = () => {
                         width: 36,
                         height: 36,
                         borderRadius: '50%',
-                        background: AVATAR_COLORS[colorIdx],
+                        background: avatarColor(name),
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -859,4 +1273,5 @@ const CourseChat = () => {
   );
 };
 
-export default CourseChat;
+export { CourseChat as default, CourseChat };
+export type {};
