@@ -24,6 +24,7 @@ import SupervisorAccountIcon from '@material-ui/icons/SupervisorAccount';
 import BusinessIcon from '@material-ui/icons/Business';
 import BarChartIcon from '@material-ui/icons/BarChart';
 import FolderOpenIcon from '@material-ui/icons/FolderOpen';
+import SchoolIcon from '@material-ui/icons/School';
 import Divider from '@material-ui/core/Divider';
 import { useHistory, useLocation } from 'react-router-dom';
 import { createStyles, makeStyles, Theme, withStyles } from '@material-ui/core';
@@ -138,12 +139,18 @@ const staffRoutes: IAppRoute[] = [
 const hubManagerRoutes: IAppRoute[] = [
   { name: 'Dashboard', route: localRoutes.dashboard, icon: AppsIcon },
   { name: 'Students', route: localRoutes.students, icon: PeopleIcon },
+  { name: 'Courses', route: localRoutes.adminCourses, icon: SchoolIcon },
   { name: 'Timetable', route: localRoutes.timetable, icon: DateRangeIcon },
   { name: 'Attendance', route: localRoutes.attendance, icon: AssessmentIcon },
   {
     name: 'Announcements',
     route: localRoutes.adminAnnouncements,
     icon: NotificationsActiveIcon,
+  },
+  {
+    name: 'Chats / Inquiries',
+    route: localRoutes.chatsInquiries,
+    icon: ForumIcon,
   },
   { name: 'Reports', route: localRoutes.hubReports, icon: BarChartIcon },
 ];
@@ -156,7 +163,6 @@ const trainerRoutes: IAppRoute[] = [
     route: localRoutes.trainerCourses,
     icon: BubbleChartIcon,
   },
-  { name: 'Lectures', route: localRoutes.trainerLectures, icon: MenuBookIcon },
   { name: 'My Schedule', route: localRoutes.myTimetable, icon: DateRangeIcon },
   {
     name: 'Assessments',
@@ -164,6 +170,11 @@ const trainerRoutes: IAppRoute[] = [
     icon: PlaylistAddCheckIcon,
   },
   { name: 'Students', route: localRoutes.trainerStudents, icon: PeopleIcon },
+  {
+    name: 'Announcements',
+    route: localRoutes.trainerAnnouncements,
+    icon: NotificationsActiveIcon,
+  },
   {
     name: 'Reports & Analytics',
     route: localRoutes.trainerAnalytics,

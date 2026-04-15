@@ -243,7 +243,9 @@ const MyTimetable = () => {
     const trainer = isTrainer(user!);
 
     // Step 2 — fetch timetable and scope to the resolved course IDs
-    const loadTimetable = (courseIds: Set<string>) => {
+    // strict=true → only include sessions that have a matching courseId (used for trainers)
+    // strict=false → also pass through sessions with no courseId (used for students)
+    const loadTimetable = (courseIds: Set<string>, strict: boolean = false) => {
       search(
         remoteRoutes.timetable,
         { limit: 500 },
@@ -253,9 +255,11 @@ const MyTimetable = () => {
             : data?.sessions || data?.data || [];
           const scoped =
             courseIds.size > 0
-              ? all.filter(
-                  (s: any) => !s.courseId || courseIds.has(String(s.courseId)),
-                )
+              ? all.filter((s: any) => {
+                  const cid = String(s.courseId ?? s.course?.id ?? '');
+                  if (strict) return cid && courseIds.has(cid);
+                  return !cid || courseIds.has(cid);
+                })
               : all;
           setSessions(scoped);
         },
@@ -265,21 +269,76 @@ const MyTimetable = () => {
     };
 
     if (trainer) {
-      // Trainers: scope to courses they teach
+      const userName = (user?.fullName || user?.username || '')
+        .toLowerCase()
+        .trim();
+
+      // Phase 1: resolve instructor table ID (courses store instructorId from
+      // the instructor table, NOT the user's contactId/id)
       search(
-        remoteRoutes.courses,
-        { instructorId: sid },
-        (courseData: any) => {
-          const list: any[] = Array.isArray(courseData)
-            ? courseData
-            : courseData?.data || [];
-          const ids = new Set(
-            list.map((c: any) => String(c.id || c.courseId)).filter(Boolean),
+        remoteRoutes.courseInstructors,
+        {},
+        (iData: any) => {
+          const instructors: any[] = Array.isArray(iData)
+            ? iData
+            : iData?.data || [];
+          const myRecord = instructors.find((i: any) => {
+            if (
+              sid != null &&
+              (String(i.id) === String(sid) ||
+                String(i.contactId) === String(sid))
+            )
+              return true;
+            if (userName && i.name && i.name.toLowerCase().trim() === userName)
+              return true;
+            return false;
+          });
+          const instructorId = myRecord?.id ?? sid;
+
+          // Phase 2: fetch this trainer's courses with the resolved instructor ID
+          search(
+            remoteRoutes.courses,
+            { instructorId, limit: 200 },
+            (courseData: any) => {
+              const courses: any[] = Array.isArray(courseData)
+                ? courseData
+                : courseData?.data || [];
+              const courseIds = new Set(
+                courses
+                  .map((c: any) => String(c.id || c.courseId))
+                  .filter(Boolean),
+              );
+
+              // Phase 3: fetch all timetable and filter strictly by courseIds
+              search(
+                remoteRoutes.timetable,
+                { limit: 500 },
+                (data: any) => {
+                  const all: any[] = Array.isArray(data)
+                    ? data
+                    : data?.sessions || data?.data || [];
+                  if (courseIds.size === 0) {
+                    setSessions([]);
+                    return;
+                  }
+                  const filtered = all.filter((s: any) => {
+                    const cid = String(s.courseId ?? s.course?.id ?? '');
+                    return cid && courseIds.has(cid);
+                  });
+                  setSessions(filtered);
+                },
+                undefined,
+                () => {},
+              );
+            },
+            undefined,
+            () => {},
           );
-          loadTimetable(ids);
         },
-        () => loadTimetable(new Set()),
-        undefined,
+        // Instructor list failed — show nothing for trainer rather than all sessions
+        () => {
+          setSessions([]);
+        },
       );
     } else {
       // Students: scope to courses they're enrolled in

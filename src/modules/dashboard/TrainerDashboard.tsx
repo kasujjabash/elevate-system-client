@@ -424,46 +424,90 @@ const TrainerDashboard = () => {
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
-    if (!user?.contactId) return;
+    if (!user?.id && !user?.contactId) return;
 
-    // Step 1: fetch only this trainer's courses
+    const sid = user?.contactId ?? user?.id;
+    const userName = (user?.fullName || user?.username || '')
+      .toLowerCase()
+      .trim();
+
+    // Phase 1: resolve instructor table ID — courses store an instructorId that
+    // references the instructor table, NOT the user's contactId/userId
     search(
-      remoteRoutes.courses,
-      { instructorId: user.contactId, limit: 100 },
-      (data: any) => {
-        const courses = Array.isArray(data) ? data : data?.data || [];
-        setMyCourses(courses);
+      remoteRoutes.courseInstructors,
+      {},
+      (iData: any) => {
+        const instructors: any[] = Array.isArray(iData)
+          ? iData
+          : iData?.data || [];
+        const myRecord = instructors.find((i: any) => {
+          if (
+            sid != null &&
+            (String(i.id) === String(sid) ||
+              String(i.contactId) === String(sid))
+          )
+            return true;
+          if (userName && i.name && i.name.toLowerCase().trim() === userName)
+            return true;
+          return false;
+        });
+        const instructorId = myRecord?.id ?? sid;
 
-        // Step 2: fetch the full timetable, then client-filter to:
-        //   a) courses this trainer teaches
-        //   b) today's day of week
-        const trainerCourseIds = new Set(
-          courses.map((c: any) => String(c.id)).filter(Boolean),
-        );
-        const todayDow = new Date().getDay(); // 0 = Sun, 1 = Mon …
-
+        // Phase 2: fetch this trainer's courses with the resolved instructor ID
         search(
-          remoteRoutes.timetable,
-          { limit: 500 },
-          (tdata: any) => {
-            const all = Array.isArray(tdata)
-              ? tdata
-              : tdata?.sessions || tdata?.data || [];
-            const forToday = all.filter((t: any) => {
-              const matchDay = Number(t.dayOfWeek) === todayDow;
-              const matchCourse =
-                trainerCourseIds.size === 0 ||
-                trainerCourseIds.has(String(t.courseId));
-              return matchDay && matchCourse;
-            });
-            setTodayClasses(forToday);
+          remoteRoutes.courses,
+          { instructorId, limit: 200 },
+          (data: any) => {
+            const courses = Array.isArray(data) ? data : data?.data || [];
+            setMyCourses(courses);
+
+            // Phase 3: fetch timetable and filter by trainer's courseIds + today's DOW
+            const trainerCourseIds = new Set(
+              courses
+                .map((c: any) => String(c.id || c.courseId))
+                .filter(Boolean),
+            );
+            const todayDow = new Date().getDay();
+
+            search(
+              remoteRoutes.timetable,
+              { limit: 500 },
+              (tdata: any) => {
+                const all2 = Array.isArray(tdata)
+                  ? tdata
+                  : tdata?.sessions || tdata?.data || [];
+                if (trainerCourseIds.size === 0) {
+                  setTodayClasses([]);
+                  return;
+                }
+                const forToday = all2.filter((t: any) => {
+                  if (Number(t.dayOfWeek) !== todayDow) return false;
+                  const cid = String(t.courseId ?? t.course?.id ?? '');
+                  return cid && trainerCourseIds.has(cid);
+                });
+                setTodayClasses(forToday);
+              },
+              undefined,
+              undefined,
+            );
           },
           undefined,
           undefined,
         );
       },
-      undefined,
-      undefined,
+      // Instructor list failed — use sid as fallback
+      () => {
+        search(
+          remoteRoutes.courses,
+          { instructorId: sid, limit: 200 },
+          (data: any) => {
+            const courses = Array.isArray(data) ? data : data?.data || [];
+            setMyCourses(courses);
+          },
+          undefined,
+          undefined,
+        );
+      },
     );
 
     // Assignment submissions scoped to this trainer

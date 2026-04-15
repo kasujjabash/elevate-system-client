@@ -74,6 +74,9 @@ const TrainerStudents = React.lazy(() => import('./trainer/TrainerStudents'));
 const TrainerLectures = React.lazy(() => import('./trainer/TrainerLectures'));
 const TrainerResources = React.lazy(() => import('./trainer/TrainerResources'));
 const TrainerAnalytics = React.lazy(() => import('./trainer/TrainerAnalytics'));
+const TrainerAnnouncements = React.lazy(
+  () => import('./trainer/TrainerAnnouncements'),
+);
 const AdminAnnouncements = React.lazy(
   () => import('./admin/announcements/AdminAnnouncements'),
 );
@@ -276,6 +279,10 @@ const ContentSwitch = () => {
           <Route
             path={localRoutes.trainerAnalytics}
             component={TrainerAnalytics}
+          />
+          <Route
+            path={localRoutes.trainerAnnouncements}
+            component={TrainerAnnouncements}
           />
           <Route
             path={localRoutes.adminAnnouncements}

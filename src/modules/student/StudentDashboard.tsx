@@ -5,6 +5,10 @@ import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 import MenuBookIcon from '@material-ui/icons/MenuBook';
 import LiveTvIcon from '@material-ui/icons/LiveTv';
+import CheckCircleIcon from '@material-ui/icons/CheckCircle';
+import RadioButtonUncheckedIcon from '@material-ui/icons/RadioButtonUnchecked';
+import CloseIcon from '@material-ui/icons/Close';
+import ArrowForwardIosIcon from '@material-ui/icons/ArrowForwardIos';
 import {
   format,
   startOfMonth,
@@ -45,6 +49,63 @@ const useStyles = makeStyles((theme: Theme) =>
       flexShrink: 0,
       [theme.breakpoints.down('sm')]: { width: '100%' },
     },
+
+    // ── Onboarding checklist ──────────────────────────────────────
+    checklistCard: {
+      background: '#fff',
+      borderRadius: 14,
+      border: '1px solid rgba(254,58,106,0.18)',
+      padding: '16px 20px',
+      marginBottom: 20,
+      boxShadow: '0 2px 10px rgba(254,58,106,0.06)',
+    },
+    checklistHeader: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 10,
+    },
+    checklistTitle: { fontSize: 14, fontWeight: 700, color: '#1f2025' },
+    checklistSub: { fontSize: 11, color: '#8a8f99', marginTop: 1 },
+    checklistProgressBar: {
+      height: 4,
+      borderRadius: 2,
+      background: '#f3f4f6',
+      overflow: 'hidden',
+      marginBottom: 12,
+    },
+    checklistProgressFill: {
+      height: '100%',
+      background: 'linear-gradient(90deg, #fe3a6a 0%, #fe8c45 100%)',
+      borderRadius: 2,
+      transition: 'width 0.5s ease',
+    },
+    checklistStep: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      padding: '7px 0',
+      borderBottom: '1px solid rgba(0,0,0,0.04)',
+      cursor: 'pointer',
+      '&:last-child': { borderBottom: 'none', paddingBottom: 0 },
+      '&:hover': { opacity: 0.75 },
+    },
+    checklistStepDone: {
+      opacity: 0.5,
+      cursor: 'default',
+      '&:hover': { opacity: 0.5 },
+    },
+    checklistStepLabel: {
+      fontSize: 13,
+      fontWeight: 500,
+      flex: 1,
+      color: '#1f2025',
+    },
+    checklistStepLabelDone: {
+      textDecoration: 'line-through',
+      color: '#8a8f99',
+    },
+    checklistDismiss: { padding: 4, color: '#c4c8d0' },
 
     // ── Reminders banner ──────────────────────────────────────────
     reminderBanner: {
@@ -317,6 +378,18 @@ const StudentDashboard = () => {
 
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
+
+  // Onboarding checklist — persisted per user via localStorage
+  const uid = user?.id || user?.contactId || '';
+  const [checklistDismissed, setChecklistDismissed] = useState(
+    () => !!localStorage.getItem(`elevate_onboarding_done_${uid}`),
+  );
+  const [profileVisited, setProfileVisited] = useState(
+    () => !!localStorage.getItem(`elevate_profile_visited_${uid}`),
+  );
+  const [timetableVisited, setTimetableVisited] = useState(
+    () => !!localStorage.getItem(`elevate_timetable_visited_${uid}`),
+  );
   const [attendanceDays, setAttendanceDays] = useState<number[]>([
     0, 0, 0, 0, 0, 0, 0,
   ]);
@@ -513,6 +586,135 @@ const StudentDashboard = () => {
               </>
             )}
           </div>
+
+          {/* ── Onboarding checklist ──────────────────────────────── */}
+          {!checklistDismissed &&
+            (() => {
+              const attendanceDone = attendanceDays.some((d) => d > 0);
+              const steps = [
+                {
+                  key: 'account',
+                  label: 'Create your account',
+                  done: true,
+                  route: null,
+                },
+                {
+                  key: 'profile',
+                  label: 'Complete your profile',
+                  done: profileVisited,
+                  route: localRoutes.myProfile,
+                },
+                {
+                  key: 'enroll',
+                  label: 'Enroll in a course',
+                  done: enrollments.length > 0,
+                  route: localRoutes.catalog,
+                },
+                {
+                  key: 'timetable',
+                  label: 'View your timetable',
+                  done: timetableVisited,
+                  route: localRoutes.myTimetable,
+                },
+                {
+                  key: 'attend',
+                  label: 'Attend your first class',
+                  done: attendanceDone,
+                  route: null,
+                },
+              ];
+              const doneCount = steps.filter((s) => s.done).length;
+              const allDone = doneCount === steps.length;
+
+              const handleStep = (step: (typeof steps)[0]) => {
+                if (step.done || !step.route) return;
+                if (step.key === 'profile') {
+                  localStorage.setItem(`elevate_profile_visited_${uid}`, '1');
+                  setProfileVisited(true);
+                }
+                if (step.key === 'timetable') {
+                  localStorage.setItem(`elevate_timetable_visited_${uid}`, '1');
+                  setTimetableVisited(true);
+                }
+                history.push(step.route);
+              };
+
+              const handleDismiss = () => {
+                localStorage.setItem(`elevate_onboarding_done_${uid}`, '1');
+                setChecklistDismissed(true);
+              };
+
+              return (
+                <div className={classes.checklistCard}>
+                  <div className={classes.checklistHeader}>
+                    <div>
+                      <div className={classes.checklistTitle}>
+                        {allDone ? "🎉 You're all set!" : 'Getting Started'}
+                      </div>
+                      <div className={classes.checklistSub}>
+                        {doneCount} of {steps.length} steps complete
+                      </div>
+                    </div>
+                    <IconButton
+                      size="small"
+                      className={classes.checklistDismiss}
+                      onClick={handleDismiss}
+                    >
+                      <CloseIcon style={{ fontSize: 16 }} />
+                    </IconButton>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className={classes.checklistProgressBar}>
+                    <div
+                      className={classes.checklistProgressFill}
+                      style={{ width: `${(doneCount / steps.length) * 100}%` }}
+                    />
+                  </div>
+
+                  {/* Steps */}
+                  {steps.map((step) => (
+                    <div
+                      key={step.key}
+                      className={`${classes.checklistStep} ${
+                        step.done ? classes.checklistStepDone : ''
+                      }`}
+                      onClick={() => handleStep(step)}
+                    >
+                      {step.done ? (
+                        <CheckCircleIcon
+                          style={{
+                            fontSize: 20,
+                            color: '#10b981',
+                            flexShrink: 0,
+                          }}
+                        />
+                      ) : (
+                        <RadioButtonUncheckedIcon
+                          style={{
+                            fontSize: 20,
+                            color: '#d1d5db',
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
+                      <span
+                        className={`${classes.checklistStepLabel} ${
+                          step.done ? classes.checklistStepLabelDone : ''
+                        }`}
+                      >
+                        {step.label}
+                      </span>
+                      {!step.done && step.route && (
+                        <ArrowForwardIosIcon
+                          style={{ fontSize: 11, color: '#c4c8d0' }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
 
           {/* My Courses */}
           <Typography className={classes.sectionTitle}>My Courses</Typography>

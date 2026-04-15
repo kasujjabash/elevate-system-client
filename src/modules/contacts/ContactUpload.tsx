@@ -156,12 +156,14 @@ const ContactUpload = ({ show, onClose, onDone }: IProps) => {
     'Upload failed. Please check your file and try again.',
   );
   const [imported, setImported] = useState(0);
+  const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true);
 
   const reset = () => {
     setFile(null);
     setStatus('idle');
     setLoading(false);
     setImported(0);
+    setSendWelcomeEmail(true);
   };
 
   const handleClose = () => {
@@ -202,6 +204,7 @@ const ContactUpload = ({ show, onClose, onDone }: IProps) => {
     setStatus('idle');
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('sendWelcomeEmail', sendWelcomeEmail ? 'true' : 'false');
     postFile(
       remoteRoutes.contactsPeopleUpload,
       formData,
@@ -293,6 +296,65 @@ const ContactUpload = ({ show, onClose, onDone }: IProps) => {
               Course values: graphic-design · website-development ·
               film-photography · alx-course
             </Typography>
+
+            {/* Welcome email toggle */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginTop: 16,
+                padding: '12px 14px',
+                background: sendWelcomeEmail
+                  ? 'rgba(231,44,108,0.04)'
+                  : '#fafafa',
+                borderRadius: 10,
+                border: `1px solid ${
+                  sendWelcomeEmail ? 'rgba(231,44,108,0.2)' : 'rgba(0,0,0,0.08)'
+                }`,
+                transition: 'all 0.2s',
+              }}
+            >
+              <div>
+                <div
+                  style={{ fontSize: 13, fontWeight: 600, color: '#1f2025' }}
+                >
+                  Send welcome email to students
+                </div>
+                <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+                  Each imported student receives a login link and password setup
+                  email
+                </div>
+              </div>
+              <div
+                onClick={() => setSendWelcomeEmail((v) => !v)}
+                style={{
+                  width: 40,
+                  height: 22,
+                  borderRadius: 11,
+                  background: sendWelcomeEmail ? '#E72C6C' : '#d1d5db',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  marginLeft: 12,
+                  transition: 'background 0.2s',
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 3,
+                    left: sendWelcomeEmail ? 21 : 3,
+                    width: 16,
+                    height: 16,
+                    borderRadius: '50%',
+                    background: '#fff',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                    transition: 'left 0.2s',
+                  }}
+                />
+              </div>
+            </div>
           </>
         )}
 
@@ -314,7 +376,9 @@ const ContactUpload = ({ show, onClose, onDone }: IProps) => {
                 {imported > 0 ? ` — ${imported} students added` : ''}
               </div>
               <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
-                The student list has been updated.
+                {sendWelcomeEmail
+                  ? 'Welcome emails with login links have been queued for delivery.'
+                  : 'The student list has been updated.'}
               </div>
             </div>
           </div>

@@ -543,7 +543,7 @@ const AdminCourses = () => {
 
   const handleSaveModule = () => {
     if (!moduleForm.title.trim()) {
-      Toast.error('Week title required');
+      Toast.error('Module title required');
       return;
     }
     setSavingModule(true);
@@ -556,12 +556,12 @@ const AdminCourses = () => {
         order: Number(moduleForm.weekNumber) || 1,
       },
       () => {
-        Toast.success('Week added');
+        Toast.success('Module added');
         setOpenModuleDialog(false);
         setModuleForm(EMPTY_MODULE);
         fetchModules(selectedCourse.id);
       },
-      () => Toast.error('Failed to add week'),
+      () => Toast.error('Failed to add module'),
       () => setSavingModule(false),
     );
   };
@@ -612,14 +612,14 @@ const AdminCourses = () => {
     setActioning(id);
     patch(
       `${remoteRoutes.enrollmentApprove}/${id}/approve`,
-      {},
+      { notify: true },
       () => {
-        Toast.success('Enrollment approved');
+        Toast.success('Student enrolled — a confirmation email has been sent');
         setPendingRequests((prev) => prev.filter((r) => r.id !== id));
         setActioning(null);
       },
       () => {
-        Toast.error('Failed to approve');
+        Toast.error('Failed to approve enrollment');
         setActioning(null);
       },
     );
@@ -725,7 +725,7 @@ const AdminCourses = () => {
                     setOpenModuleDialog(true);
                   }}
                 >
-                  Add Week
+                  Add Module
                 </Button>
               </div>
             </div>
@@ -820,7 +820,7 @@ const AdminCourses = () => {
                   variant="body2"
                   style={{ color: '#c9c4bf', marginTop: 4 }}
                 >
-                  Click "Add Week" to build the curriculum
+                  Click "Add Module" to build the course curriculum
                 </Typography>
               </div>
             ) : (
@@ -1437,7 +1437,7 @@ const AdminCourses = () => {
         >
           <DialogTitle disableTypography>
             <div className={classes.dialogTitle}>
-              <span>Add Week</span>
+              <span>Add Module</span>
               <IconButton
                 size="small"
                 onClick={() => setOpenModuleDialog(false)}
@@ -1451,7 +1451,7 @@ const AdminCourses = () => {
             <Grid container spacing={2}>
               <Grid item xs={4}>
                 <TextField
-                  label="Week #"
+                  label="Module #"
                   type="number"
                   value={moduleForm.weekNumber}
                   onChange={(e) =>
@@ -1518,7 +1518,7 @@ const AdminCourses = () => {
                 ) : undefined
               }
             >
-              {savingModule ? 'Adding…' : 'Add Week'}
+              {savingModule ? 'Adding…' : 'Add Module'}
             </Button>
           </DialogActions>
         </Dialog>

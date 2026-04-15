@@ -164,6 +164,7 @@ export const localRoutes = {
   trainerLectures: '/trainer/lectures',
   trainerResources: '/trainer/resources',
   trainerAnalytics: '/trainer/analytics',
+  trainerAnnouncements: '/trainer/announcements',
   adminAnnouncements: '/admin/announcements',
   hubReports: '/hub-reports',
 };
